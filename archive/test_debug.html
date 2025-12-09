@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Test</title>
+</head>
+<body>
+    <h1>History River Debug Test</h1>
+    <div id="test"></div>
+    <script>
+        // 测试基本JavaScript功能
+        console.log('Debug test started');
+        
+        // 测试React是否可用
+        if (typeof React !== 'undefined') {
+            console.log('React is available');
+        } else {
+            console.error('React is NOT available');
+        }
+        
+        // 测试D3是否可用
+        if (typeof d3 !== 'undefined') {
+            console.log('D3 is available');
+        } else {
+            console.error('D3 is NOT available');
+        }
+        
+        // 错误捕获
+        window.addEventListener('error', function(event) {
+            console.error('Global error caught:', event.error);
+            document.getElementById('test').innerHTML += '<p style="color: red;">Error: ' + event.error.message + '</p>';
+        });
+        
+        // 未处理的Promise拒绝
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Unhandled promise rejection:', event.reason);
+            document.getElementById('test').innerHTML += '<p style="color: red;">Promise rejection: ' + event.reason + '</p>';
+        });
+        
+        document.getElementById('test').innerHTML = '<p style="color: green;">Debug test loaded successfully</p>';
+    </script>
+</body>
+</html>

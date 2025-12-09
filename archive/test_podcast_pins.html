@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>播客Pin测试 - History River</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #f5f5f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #0f172a;
+            margin-bottom: 10px;
+        }
+        .status {
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        .status.success {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .pins-container {
+            margin-top: 30px;
+        }
+        .pin-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .pin-info h3 {
+            margin: 0 0 5px 0;
+            color: #0f172a;
+        }
+        .pin-info p {
+            margin: 0;
+            color: #64748b;
+            font-size: 14px;
+        }
+        .pin-year {
+            background: #f59e0b;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        button {
+            background: #f59e0b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #d97706;
+        }
+        #test-result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f1f5f9;
+            border-radius: 6px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎙️ 播客Pin测试工具</h1>
+        <p>测试History River播客轨道的Pin是否正确加载和显示</p>
+        
+        <button onclick="testApiDirect()">测试API直接访问</button>
+        <button onclick="testApiViaNginx()">测试API通过Nginx</button>
+        <button onclick="loadAndDisplayPins()">加载并显示所有Pins</button>
+        <button onclick="clearResults()">清空结果</button>
+        
+        <div id="api-status"></div>
+        <div id="pins-count"></div>
+        
+        <div class="pins-container" id="pins-container">
+            <p style="color: #64748b;">点击"加载并显示所有Pins"按钮开始测试</p>
+        </div>
+        
+        <h3>测试结果日志：</h3>
+        <div id="test-result">等待测试...</div>
+    </div>
+
+    <script>
+        const log = (message) => {
+            const resultDiv = document.getElementById('test-result');
+            const timestamp = new Date().toLocaleTimeString();
+            resultDiv.textContent += `[${timestamp}] ${message}\n`;
+            resultDiv.scrollTop = resultDiv.scrollHeight;
+        };
+
+        const clearResults = () => {
+            document.getElementById('test-result').textContent = '';
+            document.getElementById('pins-container').innerHTML = '<p style="color: #64748b;">点击"加载并显示所有Pins"按钮开始测试</p>';
+            document.getElementById('api-status').innerHTML = '';
+            document.getElementById('pins-count').innerHTML = '';
+            log('结果已清空');
+        };
+
+        const testApiDirect = async () => {
+            try {
+                log('正在直接访问 Django API: http://127.0.0.1:8001/api/timeline/api/riverpins/');
+                const response = await fetch('http://127.0.0.1:8001/api/timeline/api/riverpins/');
+                const data = await response.json();
+                log(`✅ API响应成功: HTTP ${response.status}`);
+                log(`📊 返回数据: ${JSON.stringify(data, null, 2)}`);
+                
+                const statusDiv = document.getElementById('api-status');
+                statusDiv.innerHTML = '<div class="status success">✅ Django API (端口8001) 正常工作</div>';
+            } catch (error) {
+                log(`❌ API访问失败: ${error.message}`);
+                const statusDiv = document.getElementById('api-status');
+                statusDiv.innerHTML = '<div class="status error">❌ Django API 访问失败</div>';
+            }
+        };
+
+        const testApiViaNginx = async () => {
+            try {
+                log('正在通过 Nginx 访问 API: /timeline-api/api/riverpins/');
+                const response = await fetch('/timeline-api/api/riverpins/');
+                const data = await response.json();
+                log(`✅ Nginx代理成功: HTTP ${response.status}`);
+                log(`📊 返回数据: ${JSON.stringify(data, null, 2)}`);
+                
+                const statusDiv = document.getElementById('api-status');
+                statusDiv.innerHTML = '<div class="status success">✅ Nginx 代理正常工作</div>';
+            } catch (error) {
+                log(`❌ Nginx代理失败: ${error.message}`);
+                const statusDiv = document.getElementById('api-status');
+                statusDiv.innerHTML = '<div class="status error">❌ Nginx 代理访问失败</div>';
+            }
+        };
+
+        const loadAndDisplayPins = async () => {
+            try {
+                log('开始加载播客pins...');
+                const response = await fetch('/timeline-api/api/riverpins/');
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const pins = data.data;
+                    log(`✅ 成功加载 ${pins.length} 个播客pins`);
+                    
+                    const countDiv = document.getElementById('pins-count');
+                    countDiv.innerHTML = `<div class="status success">📊 共找到 ${pins.length} 个播客Pin</div>`;
+                    
+                    const container = document.getElementById('pins-container');
+                    container.innerHTML = '';
+                    
+                    pins.forEach(pin => {
+                        const pinCard = document.createElement('div');
+                        pinCard.className = 'pin-card';
+                        pinCard.innerHTML = `
+                            <div class="pin-info">
+                                <h3>${pin.title || '未知标题'}</h3>
+                                <p>Job ID: ${pin.jobId}</p>
+                                ${pin.doubanRating ? `<p>豆瓣评分: ${pin.doubanRating}</p>` : ''}
+                            </div>
+                            <div class="pin-year">${pin.year}年</div>
+                        `;
+                        container.appendChild(pinCard);
+                        log(`  📍 ${pin.year}年 - ${pin.title} (${pin.jobId})`);
+                    });
+                    
+                    log('🎉 所有pins加载完成');
+                } else {
+                    log(`❌ API返回错误: ${JSON.stringify(data)}`);
+                }
+            } catch (error) {
+                log(`❌ 加载失败: ${error.message}`);
+                const statusDiv = document.getElementById('api-status');
+                statusDiv.innerHTML = `<div class="status error">❌ 加载失败: ${error.message}</div>`;
+            }
+        };
+
+        // 页面加载时自动测试
+        window.onload = () => {
+            log('页面加载完成，准备测试...');
+        };
+    </script>
+</body>
+</html>

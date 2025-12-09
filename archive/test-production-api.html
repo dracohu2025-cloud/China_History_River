@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>API Test</title>
+</head>
+<body>
+  <h1>Production API Test</h1>
+  <script>
+    // Test direct API call
+    fetch('https://history.aigc24.com/api/timeline/api/riverpins/?job_id=6c33d2b5-5b4a-4109-a757-192937b07440')
+      .then(r => r.json())
+      .then(data => {
+        console.log('API Success:', data);
+        document.body.innerHTML += '<p style="color:green">✅ API working</p>';
+      })
+      .catch(err => {
+        console.error('API Error:', err);
+        document.body.innerHTML += '<p style="color:red">❌ API failed: ' + err.message + '</p>';
+      });
+  </script>
+</body>
+</html>

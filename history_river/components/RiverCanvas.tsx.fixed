@@ -1,0 +1,611 @@
+import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
+import * as d3 from 'd3';
+import { DYNASTIES, KEY_EVENTS, getDynastyPower } from '../data/historyData';
+import { HistoricalEvent, Viewport } from '../types';
+import { getPodcastById, PodcastJobRow } from '@/services/podcastService'
+
+interface PodcastPin {
+  year: number;
+  jobId: string;
+}
+
+interface RiverCanvasProps {
+  onEventSelect: (event: HistoricalEvent | null, year: number) => void;
+  onOpenEpisode?: (jobId: string) => void;
+  width: number;
+  height: number;
+}
+
+interface LayoutNode {
+  event: HistoricalEvent;
+  x: number; // Visible screen X
+  yOffset: number; // Lane offset from center
+  lane: number;
+  width: number; // Calculated display width
+}
+
+const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode, width, height }) => {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isBrowser = typeof window !== 'undefined'
+
+  // Viewport State: x translation, y translation, k scale
+  const [viewport, setViewport] = useState<Viewport>({ x: -width * 0.5, y: 0, k: 0.8 });
+  const [hoverYear, setHoverYear] = useState<number | null>(null);
+  const [hoverEvent, setHoverEvent] = useState<HistoricalEvent | null>(null);
+  const [cursorX, setCursorX] = useState<number | null>(null);
+  const [hoverEpisodeId, setHoverEpisodeId] = useState<string | null>(null);
+  const [podcastCache, setPodcastCache] = useState<Record<string, PodcastJobRow | null>>({})
+  
+  const [podcastPins, setPodcastPins] = useState<PodcastPin[]>([]);
+  useEffect(() => {
+    fetch('/api/timeline/api/riverpins/')
+      .then(res => res.json())
+      .then((data: {success: boolean, data: PodcastPin[]}) => {
+        if (data.success) {
+          setPodcastPins(data.data)
+        }
+      })
+      .catch(console.error)
+  }, [])
+
+  // podcastPins now managed exclusively via Django admin /api/timeline/api/riverpins/
+
+  // Constants for data generation
+  const DATA_START_YEAR = -2500;
+  const DATA_END_YEAR = 2025;
+  const DATA_STEP = 2; // High fidelity for smooth curves
+
+  // 1. Data Preparation (Memoized)
+  const riverData = useMemo(() => {
+    const data = [];
+    for (let y = DATA_START_YEAR; y <= DATA_END_YEAR; y += DATA_STEP) {
+      const point: any = { year: y };
+      let totalPower = 0;
+      DYNASTIES.forEach(d => {
+        const p = getDynastyPower(d, y);
+        point[d.id] = p;
+        totalPower += p;
+      });
+      point.totalPower = totalPower; // Cache total power for layout
+      data.push(point);
+    }
+    return data;
+  }, []);
+
+  // 2. D3 Stack Generator
+  const stack = useMemo(() => {
+    return d3.stack()
+      .keys(DYNASTIES.map(d => d.id))
+      .offset(d3.stackOffsetSilhouette)
+      .order(d3.stackOrderNone);
+  }, []);
+
+  const series = useMemo(() => stack(riverData), [stack, riverData]);
+
+  // 3. Scales
+  const xScale = useMemo(() => {
+    return d3.scaleLinear()
+      .domain([-2500, 2025])
+      .range([0, width * 8]); 
+  }, [width]);
+
+  const visibleXScale = useMemo(() => {
+    const transform = d3.zoomIdentity.translate(viewport.x, 0).scale(viewport.k);
+    return transform.rescaleX(xScale);
+  }, [viewport.x, viewport.k, xScale]);
+
+  const yScale = useMemo(() => {
+    // Range determines visual height of the river
+    // Total power max ~100-150. Domain [-150, 150] fits that with silhouette offset.
+    // This means max river thickness is ~300 units -> 600 pixels.
+    return d3.scaleLinear()
+      .domain([-150, 150])
+      .range([height / 2 + 300, height / 2 - 300]);
+  }, [height]);
+
+  const areaGen = useMemo(() => {
+    return d3.area<any>()
+      .x(d => xScale(d.data.year))
+      .y0(d => yScale(d[0]))
+      .y1(d => yScale(d[1]))
+      .curve(d3.curveBasis); // Smooth curves
+  }, [xScale, yScale]);
+
+
+  // --- RIVER BANK LAYOUT ALGORITHM ---
+  // Forces events to be placed OUTSIDE the river flow
+  const eventLayoutNodes = useMemo(() => {
+    // 1. Filter Visible Events based on LOD (Level of Detail)
+    // Updated logic to show more events as you zoom in deeper
+    const relevantEvents = KEY_EVENTS.filter(ev => {
+        if (ev.importance === 1) return true; // Always show critical events
+        
+        // When camera is at minimum zoom (farthest view), only show importance 1 events
+        if (viewport.k <= 0.05) return false;
+        
+        if (viewport.k < 0.5 && ev.importance > 1) return false;
+        if (viewport.k < 1.0 && ev.importance > 2) return false;
+        if (viewport.k < 2.5 && ev.importance > 3) return false;
+        if (viewport.k < 4.5 && ev.importance > 4) return false;
+        if (viewport.k < 8.0 && ev.importance > 5) return false;
+        return true; 
+    });
+
+    // 2. Sort by importance (descending), then year
+    const sortedEvents = [...relevantEvents].sort((a, b) => {
+        if (a.importance !== b.importance) return a.importance - b.importance;
+        return a.year - b.year;
+    });
+
+    const occupiedLanes = new Map<number, {start: number, end: number}[]>();
+    const nodes: LayoutNode[] = [];
+
+    // Constants for layout
+    const PADDING_X = viewport.k <= 0.05 ? 10 : 20;
+    const LANE_HEIGHT = 52;
+    const TOLERANCE = viewport.k <= 0.05 ? 30 : 5;
+    
+    // Pixel conversion factor for river thickness calculation
+    // yScale maps 300 units to 600px -> 1 unit = 2px.
+    const PX_PER_UNIT = 2;
+
+    sortedEvents.forEach(ev => {
+        const screenX = xScale(ev.year) * viewport.k;
+        const zoomScale = Math.min(1.2, Math.max(0.8, viewport.k));
+        const yearStr = ev.year < 0 ? `BC${Math.abs(ev.year)}` : `${ev.year}`;
+        const textPixelWidth = (ev.title.length * 14) + (yearStr.length * 9) + 15;
+        const textWidth = textPixelWidth * zoomScale;
+        const boxWidth = textWidth + PADDING_X;
+        const startX = screenX - boxWidth / 2;
+        const endX = screenX + boxWidth / 2;
+
+        const bandIndex = Math.min(5, Math.max(1, ev.importance));
+        const primaryLane = (ev.year % 2 === 0 ? 1 : -1) * bandIndex;
+        const secondaryLane = -primaryLane;
+
+        const tryPlace = (laneVal: number) => {
+          const ranges = occupiedLanes.get(laneVal) || [];
+          const hasOverlap = ranges.some(r => !(endX < r.start - TOLERANCE || startX > r.end + TOLERANCE));
+          if (hasOverlap) return false;
+          ranges.push({ start: startX, end: endX });
+          occupiedLanes.set(laneVal, ranges);
+          nodes.push({ event: ev, x: 0, yOffset: 0, lane: laneVal, width: boxWidth });
+          return true;
+        };
+
+        if (!tryPlace(primaryLane)) {
+          tryPlace(secondaryLane);
+        }
+    });
+
+    return nodes.sort((a, b) => b.event.importance - a.event.importance);
+  }, [viewport.k, xScale, riverData]);
+
+
+  // --- EVENT HANDLERS ---
+  const handleWheel = useCallback((e: WheelEvent) => {
+    e.preventDefault();
+    if (!svgRef.current) return;
+
+    const rect = svgRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    setViewport(prev => {
+      const zoomIntensity = 0.002;
+      const zoomFactor = Math.exp(-e.deltaY * zoomIntensity);
+      
+      let newK = prev.k * zoomFactor;
+      const minScale = 0.05;
+      const maxScale = 50;
+      if (newK < minScale) newK = minScale;
+      if (newK > maxScale) newK = maxScale;
+      
+      const actualZoomFactor = newK / prev.k;
+      const newX = mouseX - (mouseX - prev.x) * actualZoomFactor;
+      const newY = mouseY - (mouseY - prev.y) * actualZoomFactor;
+
+      return { x: newX, y: newY, k: newK };
+    });
+  }, []);
+
+  const isDragging = useRef(false);
+  const dragStartPos = useRef({ x: 0, y: 0 });
+  const lastX = useRef(0);
+  const lastY = useRef(0);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    isDragging.current = false;
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
+    lastX.current = e.clientX;
+    lastY.current = e.clientY;
+    document.body.style.cursor = 'grabbing';
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const moveDist = Math.abs(e.clientX - dragStartPos.current.x) + Math.abs(e.clientY - dragStartPos.current.y);
+    if (moveDist > 5) isDragging.current = true;
+
+    if (e.buttons === 1) {
+      const dx = e.clientX - lastX.current;
+      const dy = e.clientY - lastY.current;
+      lastX.current = e.clientX;
+      lastY.current = e.clientY;
+      setViewport(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
+    }
+
+    if (svgRef.current) {
+        const svgRect = svgRef.current.getBoundingClientRect();
+        const mouseX = e.clientX - svgRect.left;
+        setCursorX(mouseX);
+        const year = Math.round(visibleXScale.invert(mouseX));
+        setHoverYear(year);
+        const node = eventLayoutNodes.find(n => Math.abs(n.event.year - year) <= 1);
+        setHoverEvent(node ? node.event : null);
+        const ep = podcastPins.find(p => Math.abs(p.year - year) <= 1)
+        setHoverEpisodeId(ep ? ep.jobId : null);
+    }
+  };
+
+  const handleMouseUp = () => {
+    document.body.style.cursor = 'default';
+  };
+  
+  const handleMouseLeave = () => {
+      handleMouseUp();
+      setCursorX(null);
+      setHoverYear(null);
+  }
+
+  const handleEventClick = (e: React.MouseEvent, event: HistoricalEvent) => {
+      e.stopPropagation();
+      if (isDragging.current) return;
+      onEventSelect(event, event.year);
+  };
+
+  useEffect(() => {
+    if (!isBrowser) return
+    const container = containerRef.current;
+    if (container) container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => { if (container) container.removeEventListener('wheel', handleWheel); };
+  }, [handleWheel]);
+
+  useEffect(() => {
+    let active = true
+    const epId = hoverEpisodeId
+    if (!epId) return
+    if (podcastCache[epId] !== undefined) return
+    ;(async () => {
+      const data = await getPodcastById(epId)
+      if (!active) return
+      setPodcastCache(prev => ({ ...prev, [epId]: data }))
+    })()
+    return () => { active = false }
+  }, [hoverEpisodeId, podcastCache])
+
+  // Preload podcast cache on hover only (no preload for empty pins)
+
+
+  const getEventColor = (type: string) => {
+      switch(type) {
+          case 'war': return '#ef4444'; // Red 500
+          case 'politics': return '#2563eb'; // Blue 600
+          case 'culture': return '#d97706'; // Amber 600
+          case 'science': return '#9333ea'; // Purple 600
+          default: return '#57534e'; // Stone 500
+      }
+  };
+
+  return (
+    <div 
+      ref={containerRef}
+      className="w-full h-full overflow-hidden bg-stone-50 relative cursor-grab active:cursor-grabbing select-none"
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
+      onClick={() => !isDragging.current && onEventSelect(null, hoverYear || 0)}
+    >
+      <svg ref={svgRef} width={width} height={height} className="block">
+        <defs>
+          
+          {/* Drop Shadow for Cards */}
+          <filter id="card-shadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="rgba(0,0,0,0.15)" />
+          </filter>
+          {/* Light gradient for ruler */}
+          <linearGradient id="ruler-gradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255, 255, 255, 0.9)" />
+            <stop offset="100%" stopColor="rgba(255, 255, 255, 0)" />
+          </linearGradient>
+        </defs>
+
+        {/* TRANSFORMED GROUP for River */}
+        <g transform={`translate(${viewport.x}, ${viewport.y}) scale(${viewport.k})`}>
+          {/* Central Axis */}
+          <line x1={xScale(-3000)} y1={height/2} x2={xScale(2050)} y2={height/2} stroke="#d6d3d1" strokeWidth={1} strokeDasharray="10,10" />
+
+          {/* River Dynasties */}
+          {series.map((layer) => {
+            const dynasty = DYNASTIES.find(d => d.id === layer.key);
+            if (!dynasty) return null;
+            const midYear = (dynasty.startYear + dynasty.endYear) / 2;
+            const dataIndex = Math.floor((midYear - DATA_START_YEAR) / DATA_STEP);
+            const point = layer[dataIndex];
+            const yPos = point ? yScale((point[0] + point[1]) / 2) : height / 2;
+
+            return (
+              <g key={layer.key}>
+                <path
+                  d={areaGen(layer as any) || ''}
+                  fill={dynasty.color}
+                  opacity={0.9}
+                />
+                {/* Dynasty Label inside River */}
+                <text
+                    x={xScale(midYear)}
+                    y={yPos}
+                    fill="rgba(255,255,255,0.9)"
+                    fontSize={24 / viewport.k}
+                    textAnchor="middle"
+                    alignmentBaseline="middle"
+                    className="font-title pointer-events-none"
+                    style={{ 
+                        textShadow: '0 1px 3px rgba(0,0,0,0.5)', 
+                        opacity: viewport.k > 0.4 ? 1 : 0 
+                    }}
+                >
+                    {dynasty.chineseName}
+                </text>
+              </g>
+            );
+          })}
+        </g>
+
+        {/* UI & MARKERS LAYER */}
+        <g>
+             {eventLayoutNodes.map((node) => {
+                 const screenX = visibleXScale(node.event.year);
+                 const edgePad = 16;
+                 const isHighPriority = node.event.importance <= 2;
+                 const finalX = isHighPriority
+                   ? Math.max(edgePad, Math.min(width - edgePad, screenX))
+                   : screenX;
+                 if (!isHighPriority && (screenX < -200 || screenX > width + 200)) return null;
+
+                 // DYNAMIC CENTER Y: Moves with river dragging and zooming
+                 const centerY = (height / 2) * viewport.k + viewport.y;
+                 const marginTop = 140;
+                 const marginBottom = 48;
+                 const deltaTop = (centerY - marginTop) / 5;
+                 const deltaBottom = (height - marginBottom - centerY) / 5;
+                 const band = Math.min(5, Math.max(1, Math.abs(node.lane)));
+                 const sideTop = node.lane > 0;
+                 let desiredY = sideTop ? centerY - deltaTop * band : centerY + deltaBottom * band;
+                 let clampedY = Math.max(marginTop, Math.min(height - marginBottom, desiredY));
+                 const bottomClamped = clampedY === height - marginBottom;
+                 const topClamped = clampedY === marginTop;
+                 let spread = (band * 8) + (12 - node.event.importance * 2);
+                 if (spread < 6) spread = 6;
+                 const bandSpacing = 22;
+                 const bandBase = node.event.importance <= 2 ? 2 : 0;
+                 const bandIndex = (Math.abs(node.lane) % 3) + bandBase;
+                 const jitter = ((Math.abs(node.lane) * 7 + Math.abs(node.event.year)) % 8) - 4;
+                 if (bottomClamped) clampedY = Math.max(marginTop, clampedY - spread - bandSpacing * bandIndex - jitter);
+                 if (topClamped) clampedY = Math.min(height - marginBottom, clampedY + spread + bandSpacing * bandIndex + jitter);
+                 if (!topClamped && desiredY < marginTop + 30) clampedY = Math.min(height - marginBottom, marginTop + 30 + spread + bandSpacing);
+                 const effectiveYOffset = clampedY - centerY;
+                 
+                 const color = getEventColor(node.event.type);
+                 const isHovered = hoverEvent === node.event;
+                 
+                 const baseScale = Math.min(1.2, Math.max(0.8, viewport.k));
+                 const renderScale = isHovered ? baseScale * 1.1 : baseScale;
+
+                 return (
+                     <g 
+                        key={`${node.event.year}-${node.event.title}`} 
+                        transform={`translate(${finalX}, ${centerY})`}
+                        className="cursor-pointer"
+                        onClick={(e) => handleEventClick(e, node.event)}
+                        style={{ zIndex: node.event.importance === 1 ? 50 : 10, pointerEvents: 'auto' }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleEventClick(e as any, node.event) }}
+                     >
+                        {/* 1. ANCHOR DOT in River (Center) - Embed visual style */}
+                        {/* White dot with colored stroke to look "pinned" on the river */}
+                        <circle 
+                            r={3 * renderScale} 
+                            fill="white" 
+                            stroke={color} 
+                            strokeWidth={2}
+                        />
+
+                        {/* 2. STALK CONNECTOR (Center to Bank) */}
+                        <line 
+                            x1={0} 
+                            y1={0} 
+                            x2={0} 
+                            y2={effectiveYOffset} 
+                            stroke={color} 
+                            strokeWidth={1.5} 
+                            strokeDasharray="3,3"
+                            opacity={0.7} 
+                        />
+
+                        {/* 3. LABEL CARD (On the Bank) */}
+                        <g transform={`translate(0, ${effectiveYOffset}) scale(${renderScale})`}>
+                            <rect 
+                                x={-node.width / 2 / renderScale} 
+                                y="-13" 
+                                width={node.width / renderScale} 
+                                height="26" 
+                                rx="13" 
+                                fill="white" 
+                                stroke={color}
+                                strokeWidth={1.5}
+                                filter="url(#card-shadow)"
+                            />
+                            
+                            <text
+                                x="0"
+                                y="5"
+                                fill="#44403c" // Stone 700
+                                fontSize="12"
+                                fontWeight="bold"
+                                textAnchor="middle"
+                                className="select-none whitespace-nowrap font-sans"
+                            >
+                                <tspan fill={color} fontWeight="800">{node.event.year < 0 ? `BC${Math.abs(node.event.year)}` : node.event.year}</tspan>
+                                <tspan dx="6">{node.event.title}</tspan>
+                            </text>
+                        </g>
+                     </g>
+                 );
+             })}
+
+            {/* Podcast Track at bottom */}
+            <rect x={0} y={height - 56 - 12} width={width} height={56} fill="#f5f5f4" stroke="#e7e5e4" />
+            {/* Pinned Podcast Thumbnails (always visible when within viewport) */}
+            {podcastPins.map((pin) => {
+              const screenX = visibleXScale(pin.year)
+              if (screenX < -200 || screenX > width + 200) return null
+              const TRACK_HEIGHT = 56
+              const TRACK_MARGIN = 12
+              const THUMB_SIZE = 64
+              const y = height - TRACK_HEIGHT - TRACK_MARGIN + (TRACK_HEIGHT - THUMB_SIZE) / 2
+              const job = podcastCache[pin.jobId]
+              // 优先使用数据库中存储的 thumbnail_url，如果没有则使用脚本第一张图片
+              const thumb = (job as any)?.thumbnail_url || job?.output_data?.script?.[0]?.generatedImageUrl
+               const handleClick = (e: React.MouseEvent) => {
+                 e.stopPropagation()
+                 if (isDragging.current) return
+                 if (onOpenEpisode) onOpenEpisode(pin.jobId)
+               }
+              const clipId = `thumb-clip-${pin.jobId}`
+              return (
+                <g key={`pin-${pin.jobId}`} transform={`translate(${screenX}, ${y})`} className="cursor-pointer" onClick={handleClick}>
+                  <defs>
+                    <clipPath id={clipId}>
+                      <rect x={-THUMB_SIZE/2} y={-THUMB_SIZE/2} width={THUMB_SIZE} height={THUMB_SIZE} rx={8} ry={8} />
+                    </clipPath>
+                  </defs>
+                  <rect x={-THUMB_SIZE/2} y={-THUMB_SIZE/2} width={THUMB_SIZE} height={THUMB_SIZE} rx={8} ry={8} fill="#fff" stroke="#e5e7eb" />
+                  {thumb ? (
+                    <image href={thumb} x={-THUMB_SIZE/2} y={-THUMB_SIZE/2} width={THUMB_SIZE} height={THUMB_SIZE} preserveAspectRatio="xMidYMid slice" clipPath={`url(#${clipId})`} />
+                  ) : (
+                    <g>
+                      <rect x={-THUMB_SIZE/2} y={-THUMB_SIZE/2} width={THUMB_SIZE} height={THUMB_SIZE} rx={8} ry={8} fill="#f5f5f4" />
+                      <text x={0} y={4} textAnchor="middle" fill="#9ca3af" fontSize={10}>播客</text>
+                    </g>
+                  )}
+                  <g transform={`translate(${THUMB_SIZE/2 - 10}, ${THUMB_SIZE/2 - 10})`}>
+                    <rect x={-10} y={-10} width={20} height={20} rx={5} fill="rgba(217,119,6,0.9)" />
+                    <path d="M8 5v14l11-7z" transform="translate(-6,-6) scale(0.6)" fill="white" />
+                  </g>
+                  <g transform={`translate(0, ${THUMB_SIZE/2 + 18})`}>
+                    <rect x={-22} y={-14} width={44} height={20} rx={10} fill="#fff" stroke="#d97706" />
+                    <text y={0} fill="#0f172a" fontSize={11} fontWeight={700} textAnchor="middle">{pin.year}</text>
+                  </g>
+                </g>
+              )
+            })}
+
+             {hoverEpisodeId && (() => {
+               const pin = podcastPins.find(p => p.jobId === hoverEpisodeId)
+               if (!pin) return null
+               const screenX = visibleXScale(pin.year)
+              const TRACK_HEIGHT = 56
+              const TRACK_MARGIN = 12
+              const THUMB_SIZE = 64
+              const y = height - TRACK_HEIGHT - TRACK_MARGIN + (TRACK_HEIGHT - THUMB_SIZE) / 2
+              const job = podcastCache[hoverEpisodeId]
+              // 优先使用数据库中存储的 thumbnail_url，如果没有则使用脚本第一张图片
+              const dbThumb = (job as any)?.thumbnail_url
+              const scriptThumb = job?.output_data?.script?.[0]?.generatedImageUrl
+              const thumb = dbThumb || scriptThumb
+               const handleClick = (e: React.MouseEvent) => {
+                 e.stopPropagation()
+                 if (isDragging.current) return
+                 if (onOpenEpisode) onOpenEpisode(hoverEpisodeId)
+               }
+               return (
+                <g transform={`translate(${screenX}, ${y})`} className="cursor-pointer" onClick={handleClick}>
+                  <foreignObject x={-THUMB_SIZE/2} y={-THUMB_SIZE/2} width={THUMB_SIZE} height={THUMB_SIZE}>
+                    <div xmlns="http://www.w3.org/1999/xhtml" style={{ width: `${THUMB_SIZE}px`, height: `${THUMB_SIZE}px`, borderRadius: '8px', boxShadow: '0 8px 20px rgba(0,0,0,0.15)', overflow: 'hidden', border: '1px solid #e5e7eb', background: '#fff', position: 'relative' }}>
+                      {thumb ? (
+                        <img src={thumb} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: 10 }}>无缩略图</div>
+                      )}
+                      <div style={{ position: 'absolute', right: 6, bottom: 6, width: 20, height: 20, borderRadius: 5, background: 'rgba(217,119,6,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                      </div>
+                    </div>
+                  </foreignObject>
+                </g>
+              )
+            })()}
+        </g>
+
+        {/* Fixed UI Elements (Ruler & Cursor) */}
+        <g className="pointer-events-none">
+            {/* Ruler Background */}
+            <rect width={width} height={50} fill="url(#ruler-gradient)" />
+            
+            {/* Ruler Ticks */}
+            {(() => {
+              const minYear = visibleXScale.invert(0);
+              const maxYear = visibleXScale.invert(width);
+              const a = Math.min(minYear, maxYear);
+              const b = Math.max(minYear, maxYear);
+              const span = b - a;
+              let step = 1;
+              if (span > 800) step = 100; else if (span > 300) step = 50; else if (span > 120) step = 10; else if (span > 40) step = 5; else step = 1;
+              const majorTicks = d3.range(Math.floor(a / step) * step, Math.floor(b / step) * step + step, step);
+              const minorStep = step >= 5 ? step / 5 : 0;
+              const minorTicks = minorStep ? d3.range(Math.floor(a / minorStep) * minorStep, Math.floor(b / minorStep) * minorStep + minorStep, minorStep) : [];
+              return (
+                <g>
+                  {minorTicks.map((year, i) => (
+                    <line key={`m-${i}-${year}`} x1={visibleXScale(year)} y1={0} x2={visibleXScale(year)} y2={12} stroke="rgba(0,0,0,0.15)" strokeDasharray="3 2" />
+                  ))}
+                  {majorTicks.map((year, i) => {
+                    const x = visibleXScale(year);
+                    const label = year < 0 ? `BC${Math.abs(year)}` : `${year}`;
+                    const w = label.length * 9 + 18;
+                    return (
+                      <g key={`J-${i}-${year}`} transform={`translate(${x}, 0)`}>
+                        <line y1={0} y2={18} stroke="#0f172a" strokeWidth={1} />
+                        <g transform="translate(0, 22)">
+                          <rect x={-w / 2} y={0} width={w} height={20} rx={10} fill="white" stroke="#d97706" strokeWidth={1} filter="url(#card-shadow)" />
+                          <text y={14} fill="#0f172a" fontSize={11} fontWeight="700" textAnchor="middle" fontFamily="monospace">{label}</text>
+                        </g>
+                      </g>
+                    );
+                  })}
+                </g>
+              );
+            })()}
+            
+            {/* Cursor Guide */}
+            {cursorX !== null && (
+                <g transform={`translate(${cursorX}, 0)`}>
+                    <line y1={0} y2={height} stroke="#d97706" strokeWidth={1} strokeDasharray="4 2" />
+                    <g transform="translate(0, 35)">
+                        <rect x="-40" y="0" width="80" height="24" rx="4" fill="#d97706" />
+                        <text y={16} fill="white" fontSize={12} fontWeight="bold" textAnchor="middle">
+                            {Math.round(visibleXScale.invert(cursorX))}
+                        </text>
+                    </g>
+                </g>
+            )}
+        </g>
+      </svg>
+    </div>
+  );
+};
+
+export default RiverCanvas;

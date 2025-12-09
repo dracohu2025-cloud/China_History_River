@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - History River</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .error { background: #ffe6e6; color: #cc0000; }
+        .success { background: #e6ffe6; color: #008800; }
+    </style>
+</head>
+<body>
+    <h1>History River Debug Page</h1>
+    <div id="log-container"></div>
+    
+    <script>
+        function log(message, type = 'info') {
+            const container = document.getElementById('log-container');
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `[${new Date().toISOString()}] ${message}`;
+            container.appendChild(div);
+        }
+        
+        // 捕获全局错误
+        window.addEventListener('error', (event) => {
+            log(`Global Error: ${event.message} at ${event.filename}:${event.lineno}:${event.colno}`, 'error');
+        });
+        
+        // 捕获未处理的Promise拒绝
+        window.addEventListener('unhandledrejection', (event) => {
+            log(`Unhandled Promise Rejection: ${event.reason}`, 'error');
+        });
+        
+        // 检查关键资源加载
+        const criticalResources = [
+            '/assets/main-B8dHSNYE.js',
+            '/timeline-api/api/riverpins/',
+            'https://cdn.tailwindcss.com',
+            'https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Noto+Serif+SC:wght@400;700&display=swap'
+        ];
+        
+        criticalResources.forEach(url => {
+            fetch(url)
+                .then(response => {
+                    if (response.ok) {
+                        log(`Resource loaded successfully: ${url}`, 'success');
+                    } else {
+                        log(`Resource failed with status ${response.status}: ${url}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    log(`Resource loading error for ${url}: ${error.message}`, 'error');
+                });
+        });
+        
+        // 检查React和D3是否可用
+        setTimeout(() => {
+            if (typeof window.React !== 'undefined') {
+                log('React is available globally', 'success');
+            } else {
+                log('React is NOT available globally', 'error');
+            }
+            
+            if (typeof window.d3 !== 'undefined') {
+                log('D3 is available globally', 'success');
+            } else {
+                log('D3 is NOT available globally', 'info');
+            }
+        }, 2000);
+        
+        log('Debug page initialized', 'info');
+    </script>
+</body>
+</html>

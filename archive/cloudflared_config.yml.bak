@@ -1,0 +1,41 @@
+# Cloudflare Tunnel 配置 - History River 项目
+tunnel: history-river-dev
+credentials-file: /Users/dracohu/.cloudflared/d77ac484-fb84-492c-9941-55a3b6f3deaa.json
+
+ingress:
+  # 前端应用 (Vite)
+  - hostname: history.aigc24.com
+    service: http://localhost:3000
+    originRequest:
+      noTLSVerify: true
+      connectTimeout: 30s
+      keepAliveConnections: 100
+      http2Origin: true
+
+  # Express API 服务器
+  - hostname: history-api.aigc24.com
+    service: http://localhost:4000
+    originRequest:
+      noTLSVerify: true
+      connectTimeout: 30s
+      keepAliveConnections: 100
+      http2Origin: true
+
+  # Django 后端
+  - hostname: history-timeline.aigc24.com
+    service: http://localhost:8000
+    originRequest:
+      noTLSVerify: true
+      connectTimeout: 30s
+      keepAliveConnections: 100
+      http2Origin: true
+
+  # 默认路由
+  - service: http_status:404
+
+# 全局配置
+loglevel: info
+transport-loglevel: warn
+retries: 5
+grace-period: 30s
+no-autoupdate: false

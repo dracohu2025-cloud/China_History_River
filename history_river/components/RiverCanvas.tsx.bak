@@ -1,0 +1,541 @@
+import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
+import * as d3 from 'd3';
+import { DYNASTIES, KEY_EVENTS, getDynastyPower } from '../data/historyData';
+import { HistoricalEvent, Viewport } from '../types';
+
+interface PodcastPin {
+  year: number;
+  jobId: string;
+  title?: string;
+  doubanRating?: number | null;
+}
+
+interface RiverCanvasProps {
+  onEventSelect: (event: HistoricalEvent | null, year: number) => void;
+  onOpenEpisode?: (jobId: string) => void;
+  width: number;
+  height: number;
+}
+
+interface LayoutNode {
+  event: HistoricalEvent;
+  x: number; // Visible screen X
+  yOffset: number; // Lane offset from center
+  lane: number;
+  width: number; // Calculated display width
+}
+
+// Performance optimization: Throttle function
+function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T {
+  let inThrottle: boolean;
+  return function (this: any, ...args: Parameters<T>) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  } as T;
+}
+
+// Performance optimization: RAF-based smooth updates
+function useSmoothViewport(initialViewport: Viewport) {
+  const [viewport, setViewport] = useState(initialViewport);
+  const rafRef = useRef<number>();
+  const targetViewportRef = useRef(initialViewport);
+
+  const smoothSetViewport = useCallback((newViewport: Viewport | ((prev: Viewport) => Viewport)) => {
+    const targetViewport = typeof newViewport === 'function' 
+      ? newViewport(targetViewportRef.current)
+      : newViewport;
+    
+    targetViewportRef.current = targetViewport;
+
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+    }
+
+    rafRef.current = requestAnimationFrame(() => {
+      setViewport(targetViewport);
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
+
+  return { viewport, setViewport: smoothSetViewport, targetViewport: targetViewportRef };
+}
+
+const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode, width, height }) => {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isBrowser = typeof window !== 'undefined';
+
+  // Viewport State with RAF optimization
+  const { viewport, setViewport, targetViewport } = useSmoothViewport(() => {
+    const centerYear = -237.5;
+    const k = 0.12;
+    const worldXAtCenter = ((centerYear - (-2500)) / 4525) * (width * 8);
+    const x = (width / 2) - (worldXAtCenter * k);
+    const y = (height / 2) - ((height / 2) * k);
+    return { x, y, k };
+  });
+
+  useEffect(() => {
+    const centerYear = -237.5;
+    const k = 0.12;
+    const worldXAtCenter = ((centerYear - (-2500)) / 4525) * (width * 8);
+    const x = (width / 2) - (worldXAtCenter * k);
+    const y = (height / 2) - ((height / 2) * k);
+    setViewport({ x, y, k });
+  }, [width, height, setViewport]);
+
+  // Hover and interaction states
+  const [hoverYear, setHoverYear] = useState<number | null>(null);
+  const [hoverEvent, setHoverEvent] = useState<HistoricalEvent | null>(null);
+  const [cursorX, setCursorX] = useState<number | null>(null);
+  const [hoverEpisodeId, setHoverEpisodeId] = useState<string | null>(null);
+  const [podcastPins, setPodcastPins] = useState<PodcastPin[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // D3 Zoom behavior reference
+  const zoomBehavior = useRef<d3.ZoomBehavior<HTMLDivElement, unknown>>();
+
+  // Data constants
+  const DATA_START_YEAR = -2500;
+  const DATA_END_YEAR = 2025;
+  const DATA_STEP = 2;
+
+  // Data preparation
+  const riverData = useMemo(() => {
+    const data = [];
+    for (let y = DATA_START_YEAR; y <= DATA_END_YEAR; y += DATA_STEP) {
+      const point: any = { year: y };
+      let totalPower = 0;
+      DYNASTIES.forEach(d => {
+        const p = getDynastyPower(d, y);
+        point[d.id] = p;
+        totalPower += p;
+      });
+      point.totalPower = totalPower;
+      data.push(point);
+    }
+    return data;
+  }, []);
+
+  const stack = useMemo(() => {
+    return d3.stack()
+      .keys(DYNASTIES.map(d => d.id))
+      .offset(d3.stackOffsetSilhouette)
+      .order(d3.stackOrderNone);
+  }, []);
+
+  const series = useMemo(() => stack(riverData), [stack, riverData]);
+
+  // Scales
+  const xScale = useMemo(() => {
+    return d3.scaleLinear()
+      .domain([-2500, 2025])
+      .range([0, width * 8]);
+  }, [width]);
+
+  const visibleXScale = useMemo(() => {
+    const transform = d3.zoomIdentity.translate(viewport.x, 0).scale(viewport.k);
+    return transform.rescaleX(xScale);
+  }, [viewport.x, viewport.k, xScale]);
+
+  const yScale = useMemo(() => {
+    return d3.scaleLinear()
+      .domain([-150, 150])
+      .range([height / 2 + 300, height / 2 - 300]);
+  }, [height]);
+
+  const areaGen = useMemo(() => {
+    return d3.area<any>()
+      .x(d => xScale(d.data.year))
+      .y0(d => yScale(d[0]))
+      .y1(d => yScale(d[1]))
+      .curve(d3.curveBasis);
+  }, [xScale, yScale]);
+
+  // Event layout algorithm
+  const eventLayoutNodes = useMemo(() => {
+    const relevantEvents = KEY_EVENTS.filter(ev => {
+        if (ev.importance === 1) return true;
+        if (viewport.k <= 0.05) return false;
+        if (viewport.k < 0.5 && ev.importance > 1) return false;
+        if (viewport.k < 1.0 && ev.importance > 2) return false;
+        if (viewport.k < 2.5 && ev.importance > 3) return false;
+        if (viewport.k < 4.5 && ev.importance > 4) return false;
+        return true; 
+    });
+
+    const sortedEvents = [...relevantEvents].sort((a, b) => {
+        if (a.importance !== b.importance) return a.importance - b.importance;
+        return a.year - b.year;
+    });
+
+    const occupiedLanes = new Map<number, {start: number, end: number}[]>();
+    const nodes: LayoutNode[] = [];
+
+    const PADDING_X = viewport.k <= 0.05 ? 10 : 20;
+    const LANE_HEIGHT = 52;
+    const TOLERANCE = viewport.k <= 0.05 ? 30 : 5;
+    const PX_PER_UNIT = 2;
+
+    sortedEvents.forEach(ev => {
+        const screenX = xScale(ev.year) * viewport.k;
+        const zoomScale = Math.min(1.2, Math.max(0.8, viewport.k));
+        const yearStr = ev.year < 0 ? `BC${Math.abs(ev.year)}` : `${ev.year}`;
+        const textPixelWidth = (ev.title.length * 14) + (yearStr.length * 9) + 15;
+        const textWidth = textPixelWidth * zoomScale;
+        const boxWidth = textWidth + PADDING_X;
+        const startX = screenX - boxWidth / 2;
+        const endX = screenX + boxWidth / 2;
+
+        const bandIndex = Math.min(5, Math.max(1, ev.importance));
+        const primaryLane = (ev.year % 2 === 0 ? 1 : -1) * bandIndex;
+        const secondaryLane = -primaryLane;
+
+        const tryPlace = (laneVal: number) => {
+          const ranges = occupiedLanes.get(laneVal) || [];
+          const hasOverlap = ranges.some(r => !(endX < r.start - TOLERANCE || startX > r.end + TOLERANCE));
+          if (!hasOverlap) {
+            occupiedLanes.set(laneVal, [...ranges, { start: startX, end: endX }]);
+            return true;
+          }
+          return false;
+        };
+
+        let lane = null;
+        for (let i = 0; i <= 3; i++) {
+          const laneOffset = i;
+          const newPrimary = primaryLane < 0 ? primaryLane - laneOffset : primaryLane + laneOffset;
+          if (tryPlace(newPrimary)) {
+            lane = newPrimary;
+            break;
+          }
+          const newSecondary = secondaryLane < 0 ? secondaryLane - laneOffset : secondaryLane + laneOffset;
+          if (tryPlace(newSecondary)) {
+            lane = newSecondary;
+            break;
+          }
+        }
+
+        if (lane !== null) {
+          nodes.push({ event: ev, x: screenX, yOffset: lane * LANE_HEIGHT, lane, width: boxWidth });
+        }
+    });
+
+    return nodes;
+  }, [KEY_EVENTS, viewport.k, xScale]);
+
+  // Event handlers
+  const handleEventClick = useCallback((e: React.MouseEvent, event: HistoricalEvent) => {
+    e.stopPropagation();
+    if (isDragging) return;
+    onEventSelect(event, event.year);
+  }, [onEventSelect, isDragging]);
+
+  const handlePodcastClick = useCallback((e: React.MouseEvent, jobId: string) => {
+    e.stopPropagation();
+    if (onOpenEpisode) onOpenEpisode(jobId);
+  }, [onOpenEpisode]);
+
+  // Initialize D3 zoom behavior
+  useEffect(() => {
+    if (!svgRef.current) return;
+
+    const svg = d3.select(svgRef.current);
+    const g = svg.select('g.river-transform-group');
+
+    // Remove any existing zoom behavior
+    svg.on('.zoom', null);
+
+    // Create new zoom behavior
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.04, 20])
+      .translateExtent([[-width * 2, -height * 2], [width * 2, height * 2]])
+      .on('start', () => {
+        setIsDragging(true);
+      })
+      .on('zoom', (event) => {
+        const { transform } = event;
+        setViewport(prev => ({
+          x: transform.x,
+          y: transform.y,
+          k: transform.k
+        }));
+      })
+      .on('end', () => {
+        setIsDragging(false);
+      });
+
+    zoomBehavior.current = zoom;
+    svg.call(zoom as any);
+
+    return () => {
+      svg.on('.zoom', null);
+    };
+  }, [width, height, setViewport]);
+
+  // Apply transform to SVG
+  useEffect(() => {
+    if (!svgRef.current) return;
+    const svg = d3.select(svgRef.current);
+    const g = svg.select('g.river-transform-group');
+    if (g) {
+      g.attr('transform', `translate(${viewport.x}, ${viewport.y}) scale(${viewport.k})`);
+    }
+  }, [viewport]);
+
+  // Load podcast pins
+  useEffect(() => {
+    fetch('/timeline-api/api/riverpins/')
+      .then(res => res.json())
+      .then((data: {success: boolean, data: PodcastPin[]}) => {
+        if (data.success) {
+          setPodcastPins(data.data);
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  // Throttled hover detection
+  const throttledHoverDetection = useMemo(() => {
+    return throttle((mouseX: number, svgRect: DOMRect) => {
+      if (!isDragging && svgRef.current) {
+        setCursorX(mouseX);
+        const year = Math.round(visibleXScale.invert(mouseX));
+        setHoverYear(year);
+        const node = eventLayoutNodes.find(n => Math.abs(n.event.year - year) <= 1);
+        setHoverEvent(node ? node.event : null);
+        const ep = podcastPins.find(p => Math.abs(p.year - year) <= 1);
+        setHoverEpisodeId(ep ? ep.jobId : null);
+      } else if (isDragging) {
+        setCursorX(null);
+        setHoverYear(null);
+        setHoverEvent(null);
+        setHoverEpisodeId(null);
+      }
+    }, 16); // ~60fps throttling
+  }, [isDragging, eventLayoutNodes, visibleXScale, podcastPins]);
+
+  // Mouse move handler for hover detection
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (svgRef.current && !isDragging) {
+      const svgRect = svgRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - svgRect.left;
+      throttledHoverDetection(mouseX, svgRect);
+    }
+  }, [isDragging, throttledHoverDetection]);
+
+  const getEventColor = (type: string) => {
+    switch(type) {
+      case 'war': return '#ef4444';
+      case 'politics': return '#2563eb';
+      case 'culture': return '#d97706';
+      case 'science': return '#9333ea';
+      default: return '#57534e';
+    }
+  };
+
+  // Set up container mouse move listener
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('mousemove', handleMouseMove as any);
+      return () => {
+        container.removeEventListener('mousemove', handleMouseMove as any);
+      };
+    }
+  }, [handleMouseMove]);
+
+  return (
+    <div 
+      ref={containerRef}
+      className="w-full h-full overflow-hidden bg-stone-50 relative cursor-grab active:cursor-grabbing select-none"
+      onMouseMove={handleMouseMove}
+      onMouseLeave={() => {
+        setIsDragging(false);
+        setCursorX(null);
+        setHoverYear(null);
+        setHoverEvent(null);
+        setHoverEpisodeId(null);
+      }}
+    >
+      <svg ref={svgRef} width={width} height={height} className="block">
+        <defs>
+          <filter id="card-shadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="rgba(0,0,0,0.15)" />
+          </filter>
+          <linearGradient id="ruler-gradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255, 255, 255, 0.9)" />
+            <stop offset="100%" stopColor="rgba(255, 255, 255, 0)" />
+          </linearGradient>
+        </defs>
+
+        <g className="river-transform-group">
+          <line x1={xScale(-3000)} y1={height/2} x2={xScale(2050)} y2={height/2} stroke="#d6d3d1" strokeWidth="1" strokeDasharray="10,10" />
+
+          {series.map((layer) => {
+            const dynasty = DYNASTIES.find(d => d.id === layer.key);
+            if (!dynasty) return null;
+            return (
+              <path
+                key={layer.key}
+                d={areaGen(layer) || undefined}
+                fill={dynasty.color}
+                opacity={0.7}
+                className="hover:opacity-90 cursor-pointer transition-opacity duration-300"
+              />
+            );
+          })}
+
+          {eventLayoutNodes.map((node, idx) => {
+            const color = getEventColor(node.event.event_type);
+            const isHovered = hoverEvent?.id === node.event.id;
+            const isHoveredYear = hoverYear && Math.abs(hoverYear - node.event.year) <= 1;
+            return (
+              <g key={node.event.id}>
+                <rect
+                  x={node.x - node.width / 2}
+                  y={height / 2 + node.yOffset - 30}
+                  width={node.width}
+                  height={32}
+                  rx={6}
+                  fill={isHovered || isHoveredYear ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.9)'}
+                  stroke={color}
+                  strokeWidth={isHoveredYear ? 2 : 1}
+                  filter="url(#card-shadow)"
+                  className="transition-all duration-200 cursor-pointer"
+                  onClick={(e) => handleEventClick(e, node.event)}
+                  onMouseEnter={() => !isDragging && setHoverEvent(node.event)}
+                  onMouseLeave={() => !isDragging && setHoverEvent(null)}
+                />
+                <text
+                  x={node.x - node.width / 2 + 10}
+                  y={height / 2 + node.yOffset - 12}
+                  fill="#1f2937"
+                  fontSize={12}
+                  fontWeight={600}
+                  className="select-none pointer-events-none"
+                >
+                  {node.event.title}
+                </text>
+                <text
+                  x={node.x + node.width / 2 - 10}
+                  y={height / 2 + node.yOffset - 12}
+                  fill="#6b7280"
+                  fontSize={10}
+                  textAnchor="end"
+                  className="select-none pointer-events-none"
+                >
+                  {node.event.year < 0 ? `BC${Math.abs(node.event.year)}` : node.event.year}
+                </text>
+              </g>
+            );
+          })}
+
+          {podcastPins.map((pin) => {
+            const year = pin.year;
+            const screenX = xScale(year) * viewport.k;
+            const isHovered = hoverEpisodeId === pin.jobId;
+            return (
+              <g key={pin.jobId} onClick={(e) => handlePodcastClick(e, pin.jobId)}>
+                <circle
+                  cx={screenX}
+                  cy={height / 2}
+                  r={isHovered ? 10 : 7}
+                  fill="#f59e0b"
+                  stroke="#ffffff"
+                  strokeWidth="2"
+                  className="cursor-pointer transition-all duration-200"
+                  onMouseEnter={() => !isDragging && setHoverEpisodeId(pin.jobId)}
+                  onMouseLeave={() => !isDragging && setHoverEpisodeId(null)}
+                />
+                {pin.doubanRating && (
+                  <text
+                    x={screenX}
+                    y={height / 2 - 15}
+                    textAnchor="middle"
+                    fill="#4ade80"
+                    fontSize="10"
+                    fontWeight="bold"
+                    className="select-none pointer-events-none"
+                  >
+                    ⭐ {pin.doubanRating}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </g>
+
+        {/* UI Overlay - Not transformed, always on top */}
+        <rect
+          x={0}
+          y={height / 2 - 130}
+          width={width}
+          height={26}
+          fill="url(#ruler-gradient)"
+          pointerEvents="none"
+          opacity={0.7}
+        />
+        <line
+          x1={0}
+          y1={height / 2}
+          x2={width}
+          y2={height / 2}
+          stroke="rgba(0,0,0,0.1)"
+          strokeWidth={2}
+          strokeDasharray="5,5"
+          pointerEvents="none"
+        />
+
+        {cursorX !== null && (
+          <line
+            x1={cursorX}
+            y1={0}
+            x2={cursorX}
+            y2={height}
+            stroke={hoverYear ? '#f59e0b' : 'rgba(0,0,0,0.3)'}
+            strokeWidth={hoverYear ? 2 : 1}
+            strokeDasharray="5,5"
+            pointerEvents="none"
+          />
+        )}
+
+        {hoverYear !== null && (
+          <>
+            <rect
+              x={Math.min(Math.max(10, cursorX || 0 - 60), width - 140)}
+              y={height / 2 + 10}
+              width={120}
+              height={24}
+              rx={4}
+              fill="rgba(0,0,0,0.7)"
+              pointerEvents="none"
+            />
+            <text
+              x={Math.min(Math.max(70, cursorX || 0), width - 70)}
+              y={height / 2 + 26}
+              textAnchor="middle"
+              fill="#ffffff"
+              fontWeight="600"
+              pointerEvents="none"
+            >
+              {hoverYear < 0 ? `公元前 ${Math.abs(hoverYear)} 年` : `公元 ${hoverYear} 年`}
+            </text>
+          </>
+        )}
+      </svg>
+    </div>
+  );
+};
+
+export default RiverCanvas;

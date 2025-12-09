@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>播客播放器测试</title>
+</head>
+<body>
+    <h1>播客播放器实时测试</h1>
+    <p>播客ID: 16ec7d2c-cd25-4dce-90b1-b3f680aaeff1</p>
+    <button onclick="testSupabase()">测试Supabase连接</button>
+    <div id="result"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://zhvczrrcwpxgrifshhmh.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpodmN6cnJjd3B4Z3JpZnNoaG1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3MDg5NzUsImV4cCI6MjA3OTI4NDk3NX0.aSa9aWHsNxghJhGj91l1bU_vwAMPp9ZIDTQnm-OG-go';
+        
+        async function testSupabase() {
+            const result = document.getElementById('result');
+            result.innerHTML = '<p>正在测试Supabase连接...</p>';
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/jobs?id=eq.16ec7d2c-cd25-4dce-90b1-b3f680aaeff1&select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    result.innerHTML = `<p style="color: green;">✅ 连接成功！</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    result.innerHTML = `<p style="color: red;">❌ 连接失败: ${response.status} ${response.statusText}</p>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<p style="color: red;">❌ 错误: ${error.message}</p>`;
+            }
+        }
+        
+        // 自动测试
+        window.onload = () => {
+            testSupabase();
+        };
+    </script>
+</body>
+</html>

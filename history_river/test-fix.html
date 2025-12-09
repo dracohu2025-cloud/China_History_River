@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试修复 - History River</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #fdfbf7; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #e6ffe6; color: #008800; }
+        .error { background: #ffe6e6; color: #cc0000; }
+        .info { background: #e6f3ff; color: #0066cc; }
+        #test-frame { 
+            width: 100%; 
+            height: 600px; 
+            border: 2px solid #ccc; 
+            margin-top: 20px;
+            background: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>History River 修复测试</h1>
+    
+    <div id="status-container"></div>
+    
+    <button onclick="runTests()" style="padding: 10px 20px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        运行测试
+    </button>
+    
+    <iframe id="test-frame" src="/dist/index.html" style="display: none;"></iframe>
+    
+    <script>
+        function log(message, type = 'info') {
+            const container = document.getElementById('status-container');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            container.appendChild(div);
+        }
+        
+        function runTests() {
+            document.getElementById('status-container').innerHTML = '';
+            log('开始测试...', 'info');
+            
+            const iframe = document.getElementById('test-frame');
+            iframe.style.display = 'block';
+            
+            // 测试1: 检查iframe是否加载
+            iframe.onload = function() {
+                log('✅ 主页面加载成功', 'success');
+                
+                setTimeout(() => {
+                    try {
+                        // 测试2: 检查关键元素是否存在
+                        const root = iframe.contentDocument.getElementById('root');
+                        if (root) {
+                            log('✅ React根元素存在', 'success');
+                            
+                            // 测试3: 检查SVG元素
+                            const svg = iframe.contentDocument.querySelector('svg');
+                            if (svg) {
+                                log('✅ SVG画布元素存在', 'success');
+                                
+                                // 测试4: 检查是否有路径元素（河流）
+                                const paths = svg.querySelectorAll('path');
+                                if (paths.length > 0) {
+                                    log(`✅ 找到 ${paths.length} 个路径元素（河流段）`, 'success');
+                                } else {
+                                    log('⚠️ 未找到路径元素（河流段）', 'error');
+                                }
+                                
+                                // 测试5: 检查文字元素
+                                const texts = svg.querySelectorAll('text');
+                                if (texts.length > 0) {
+                                    log(`✅ 找到 ${texts.length} 个文字元素（王朝名称）`, 'success');
+                                } else {
+                                    log('⚠️ 未找到文字元素（王朝名称）', 'error');
+                                }
+                                
+                                // 测试6: 检查变换属性
+                                const transformedElements = svg.querySelectorAll('[transform]');
+                                if (transformedElements.length > 0) {
+                                    log(`✅ 找到 ${transformedElements.length} 个有变换的元素`, 'success');
+                                }
+                                
+                            } else {
+                                log('❌ SVG画布元素不存在', 'error');
+                            }
+                            
+                            // 测试7: 检查控制台错误
+                            const originalConsoleError = iframe.contentWindow.console.error;
+                            let errorCount = 0;
+                            iframe.contentWindow.console.error = function(...args) {
+                                errorCount++;
+                                log(`❌ 控制台错误: ${args.join(' ')}`, 'error');
+                                originalConsoleError.apply(this, args);
+                            };
+                            
+                            setTimeout(() => {
+                                if (errorCount === 0) {
+                                    log('✅ 没有控制台错误', 'success');
+                                } else {
+                                    log(`❌ 发现 ${errorCount} 个控制台错误`, 'error');
+                                }
+                            }, 3000);
+                            
+                        } else {
+                            log('❌ React根元素不存在', 'error');
+                        }
+                    } catch (e) {
+                        log(`❌ 测试过程中出错: ${e.message}`, 'error');
+                    }
+                }, 2000);
+            };
+            
+            iframe.onerror = function() {
+                log('❌ 主页面加载失败', 'error');
+            };
+        }
+        
+        // 页面加载完成后自动运行测试
+        window.onload = function() {
+            log('测试页面加载完成', 'info');
+        };
+    </script>
+</body>
+</html>
