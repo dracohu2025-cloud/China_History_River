@@ -66,18 +66,25 @@ export async function fetchCompletedPodcasts(userId: string): Promise<PodcastJob
 
 export async function getRiverPinByJobId(jobId: string): Promise<{ title: string; doubanRating: number | null } | null> {
   try {
-    // 使用 /api/timeline 路径，⚠️ 注意：在生产环境会通过vite proxy或node代理
-    const apiUrl = `/api/timeline/api/riverpins/?job_id=${encodeURIComponent(jobId)}`
-    const res = await fetch(apiUrl)
-    if (!res.ok) return null
-    const data = await res.json()
-    if (data.success && data.data && data.data.length > 0) {
-      const pin = data.data[0]
-      return {
-        title: pin.title || '',
-        doubanRating: pin.doubanRating || null
+    if (supabase) {
+      const { data } = await supabase
+        .from('river_pins')
+        .select('title, douban_rating')
+        .eq('job_id', jobId)
+        .single()
+
+      if (data) {
+        return {
+          title: data.title,
+          doubanRating: data.douban_rating
+        }
       }
+      return null
     }
+
+    // Fallback if no supabase client (though it should exist)
+    // We can use the Vercel API route if we created one, but direct DB is better.
+    // If we have to use fetch, we'd need an API route. But we have RLS enabled.
     return null
   } catch (e) {
     console.error('获取RiverPin失败:', e)
@@ -115,9 +122,9 @@ export async function getPodcastById(jobId: string): Promise<PodcastJobRow | nul
       .single()
     if (!pData) return null
     const row = pData as PodcastsRow
-  const path = (row.audio_path || '').replace(/^\//, '')
-  const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'podcasts'
-  const publicUrl = BASE_URL && path ? `${BASE_URL}/storage/v1/object/public/${bucket}/${path}` : ''
+    const path = (row.audio_path || '').replace(/^\//, '')
+    const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'podcasts'
+    const publicUrl = BASE_URL && path ? `${BASE_URL}/storage/v1/object/public/${bucket}/${path}` : ''
     const output: JobOutput = {
       audioUrl: publicUrl,
       audioPath: path,
