@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import RiverCanvas from './components/RiverCanvas';
 import DetailModal from './components/DetailModal';
 import PodcastPlayerModal from './components/PodcastPlayerModal';
-import { HistoricalEvent } from './types';
+import { HistoricalEvent, Dynasty } from './types';
+import { fetchDynasties, fetchEvents } from './services/dataService';
+import { DYNASTIES as FALLBACK_DYNASTIES, KEY_EVENTS as FALLBACK_EVENTS } from './data/historyData';
 
 const App: React.FC = () => {
   const isBrowser = typeof window !== 'undefined'
@@ -12,6 +14,19 @@ const App: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [playerOpen, setPlayerOpen] = useState(false);
   const [currentEpisodeId, setCurrentEpisodeId] = useState<string | null>(null);
+
+  const [dynasties, setDynasties] = useState<Dynasty[]>(FALLBACK_DYNASTIES);
+  const [events, setEvents] = useState<HistoricalEvent[]>(FALLBACK_EVENTS);
+
+  useEffect(() => {
+    // Fetch data from Supabase
+    const loadData = async () => {
+      const [d, e] = await Promise.all([fetchDynasties(), fetchEvents()]);
+      if (d.length > 0) setDynasties(d);
+      if (e.length > 0) setEvents(e);
+    };
+    loadData();
+  }, []);
 
   useEffect(() => {
     if (!isBrowser) return
@@ -50,7 +65,7 @@ const App: React.FC = () => {
 
   return (
     <div className="relative w-screen h-screen bg-stone-50 text-stone-900 overflow-hidden">
-      
+
       {/* UI Header / Title */}
       <div className="absolute top-0 left-0 w-full px-6 py-3 z-10 pointer-events-none bg-gradient-to-b from-stone-50 via-stone-50/60 to-transparent">
         <div className="flex items-baseline gap-3">
@@ -63,9 +78,9 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      <RiverCanvas 
-        width={dimensions.width} 
-        height={dimensions.height} 
+      <RiverCanvas
+        width={dimensions.width}
+        height={dimensions.height}
         onEventSelect={handleEventSelect}
         onOpenEpisode={(jobId) => {
           if (isBrowser) {
@@ -73,21 +88,23 @@ const App: React.FC = () => {
             window.location.href = `/player.html?episode=${jobId}&v=3`
           }
         }}
+        dynasties={dynasties}
+        events={events}
       />
 
 
       {/* Detail Modal */}
       {modalOpen && selectedYear !== null && (
-        <DetailModal 
-          year={selectedYear} 
-          event={selectedEvent} 
-          onClose={() => setModalOpen(false)} 
+        <DetailModal
+          year={selectedYear}
+          event={selectedEvent}
+          onClose={() => setModalOpen(false)}
         />
       )}
 
       {/* Podcast Player removed: navigate to standalone page */}
 
-      
+
     </div>
   );
 };
