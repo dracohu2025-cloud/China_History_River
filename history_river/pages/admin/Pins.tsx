@@ -89,8 +89,8 @@ const Pins: React.FC = () => {
                         <input value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Title" className="border w-full px-3 py-2 rounded" />
                     </div>
                     <div>
-                        <label className="block text-xs text-gray-500 mb-1">年份</label>
-                        <input type="number" value={formData.year} onChange={e => setFormData({ ...formData, year: Number(e.target.value) })} placeholder="Year" className="border w-full px-3 py-2 rounded" />
+                        <label className="block text-xs text-gray-500 mb-1">年份 (负数代表公元前)</label>
+                        <input type="number" value={formData.year} onChange={e => setFormData({ ...formData, year: Number(e.target.value) })} placeholder="Year (e.g. -221)" className="border w-full px-3 py-2 rounded" />
                     </div>
                     <div>
                         <label className="block text-xs text-gray-500 mb-1">豆瓣评分 (Optional)</label>

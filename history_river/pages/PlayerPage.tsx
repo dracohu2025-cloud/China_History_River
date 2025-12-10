@@ -137,15 +137,6 @@ const PlayerPage: React.FC = () => {
       </main>
 
       <footer className="px-6 py-6 text-center text-xs text-stone-400">资源由 Supabase 提供 • 厚客户端直连</footer>
-
-      {/* DEBUG OVERLAY */}
-      <div className="fixed bottom-0 right-0 bg-black/80 text-green-400 p-2 text-[10px] m-2 rounded z-50 pointer-events-none">
-        <p>ID: {episode}</p>
-        <p>URL: {process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET (Start: ' + process.env.NEXT_PUBLIC_SUPABASE_URL.substring(0, 10) + '...)' : 'MISSING'}</p>
-        <p>KEY: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'MISSING'}</p>
-        <p>Loading: {String(loading)}</p>
-        <p>Job: {job ? 'FOUND' : 'NULL'}</p>
-      </div>
     </div>
   )
 }
