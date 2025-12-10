@@ -28,8 +28,16 @@ export interface Viewport {
   k: number;
 }
 
+
 export interface EventDetail {
   year: number;
   title: string;
   content: string;
+}
+
+export interface RiverPin {
+  year: number;
+  jobId: string;
+  title?: string;
+  doubanRating?: number | null;
 }

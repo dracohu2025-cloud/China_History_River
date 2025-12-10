@@ -1,15 +1,10 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import * as d3 from 'd3';
 import { getDynastyPower } from '../data/historyData';
-import { Dynasty, HistoricalEvent, Viewport } from '../types';
+import { HistoricalEvent, Viewport, EventDetail, Dynasty, RiverPin } from '../types';
 import { getPodcastById, PodcastJobRow } from '@/services/podcastService';
 
-interface PodcastPin {
-  year: number;
-  jobId: string;
-  title?: string;
-  doubanRating?: number | null;
-}
+
 
 interface RiverCanvasProps {
   onEventSelect: (event: HistoricalEvent | null, year: number) => void;
@@ -18,6 +13,7 @@ interface RiverCanvasProps {
   height: number;
   dynasties: Dynasty[];
   events: HistoricalEvent[];
+  pins: RiverPin[];
 }
 
 interface LayoutNode {
@@ -75,7 +71,7 @@ function useSmoothViewport(initialViewport: Viewport) {
 
 // FIX: 提取PodcastPin为独立组件，避免闭包陷阱导致的位移bug
 interface PodcastPinComponentProps {
-  pin: PodcastPin;
+  pin: RiverPin;
   screenX: number;
   height: number;
   trackHeight: number;
@@ -193,7 +189,7 @@ const PodcastPinComponent: React.FC<PodcastPinComponentProps> = ({
   );
 };
 
-const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode, width, height, dynasties, events }) => {
+const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode, width, height, dynasties, events, pins }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef<d3.ZoomBehavior<Element, unknown>>();
@@ -232,33 +228,6 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode,
   const [cursorX, setCursorX] = useState<number | null>(null);
   const [podcastCache, setPodcastCache] = useState<Record<string, PodcastJobRow | null>>({});
   const [hoverEpisodeId, setHoverEpisodeId] = useState<string | null>(null);
-
-  const [podcastPins, setPodcastPins] = useState<PodcastPin[]>([]);
-
-  useEffect(() => {
-    fetch('/timeline-api/api/riverpins/')
-      .then(res => res.json())
-      .then((data: { success: boolean, data: PodcastPin[] }) => {
-        console.log('📍 Podcast pins loaded:', data);
-        if (data.success) {
-          setPodcastPins(data.data);
-          // 预加载所有播客数据
-          data.data.forEach(pin => {
-            getPodcastById(pin.jobId).then(job => {
-              console.log(`📦 Podcast data for ${pin.jobId}:`, job);
-              setPodcastCache(prev => ({ ...prev, [pin.jobId]: job }));
-            }).catch(err => {
-              console.error(`❌ Failed to load podcast ${pin.jobId}:`, err);
-              setPodcastCache(prev => ({ ...prev, [pin.jobId]: null }));
-            });
-          });
-        }
-      })
-      .catch(err => {
-        console.error('❌ Failed to load podcast pins:', err);
-        setPodcastPins([]);
-      });
-  }, [])
 
   // Constants for data generation
   const DATA_START_YEAR = -2500;
@@ -447,7 +416,7 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode,
         const node = eventLayoutNodes.find(n => Math.abs(n.event.year - year) <= 1);
         setHoverEvent(node ? node.event : null);
 
-        const ep = podcastPins.find(p => Math.abs(p.year - year) <= 1);
+        const ep = pins.find(p => Math.abs(p.year - year) <= 1);
         setHoverEpisodeId(ep ? ep.jobId : null);
       } else {
         setCursorX(null);
@@ -456,7 +425,7 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode,
         setHoverEpisodeId(null);
       }
     }, 16), // ~60fps
-    [width, visibleXScale, eventLayoutNodes, podcastPins]
+    [width, visibleXScale, eventLayoutNodes, pins]
   );
 
   useEffect(() => {
@@ -590,7 +559,7 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode,
           })}
 
           {hoverEpisodeId && (() => {
-            const pin = podcastPins.find(p => p.jobId === hoverEpisodeId);
+            const pin = pins.find(p => p.jobId === hoverEpisodeId);
             if (!pin) return null;
             const screenX = visibleXScale(pin.year);
             const TRACK_HEIGHT = 56;
@@ -766,24 +735,6 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode,
               textAnchor="start"
               style={{
                 fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif",
-                letterSpacing: "0.5px",
-                paintOrder: "stroke",
-                strokeWidth: 2,
-                stroke: "#ffffff"
-              }}
-              opacity={0.9}
-              x={1}
-              y={1}
-            >
-              历史播客
-            </text>
-            <text
-              fill="#0f172a"
-              fontSize={16}
-              fontWeight={700}
-              textAnchor="start"
-              style={{
-                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif",
                 letterSpacing: "0.5px"
               }}
             >
@@ -795,32 +746,21 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode,
               y1={8}
               x2={68}
               y2={8}
-              stroke="#d97706"
-              strokeWidth={1.5}
-              opacity={0.9}
             />
           </g>
           {/* Pinned Podcast Info (always visible when within viewport) */}
-          {podcastPins.map((pin) => {
+          {pins.map((pin) => {
             const screenX = visibleXScale(pin.year);
+            // 这里的检查是为了性能优化，屏幕外的Pin不渲染
             if (screenX < -200 || screenX > width + 200) return null;
+
             const TRACK_HEIGHT = 56;
             const TRACK_MARGIN = 12;
-            const title = pin.title || '';  // 直接从pin对象获取书籍名称
-            const handleClick = (e: React.MouseEvent) => {
-              e.stopPropagation();
-              if (onOpenEpisode) onOpenEpisode(pin.jobId);
-            };
+            const title = pin.title || '';
 
-            // FIX: 创建一个唯一的组件来避免闭包陷阱
-            // 关键问题：onMouseEnter/onMouseLeave捕获的是渲染时的screenX值
-            // 当viewport变化时，这个值会过时，但事件处理器还使用旧值
-
-            // CRITICAL FIX: 在key中添加viewport依赖，确保Pin随时间轴移动而重新渲染
-            // 解决拖动时Pin位置不同步的bug
             return (
               <PodcastPinComponent
-                key={`pin-${pin.jobId}-${viewport.x}-${viewport.k}`}  // ← 添加viewport依赖，强制重新渲染
+                key={`pin-${pin.jobId}-${viewport.x}-${viewport.k}`}
                 pin={pin}
                 screenX={screenX}
                 height={height}

@@ -19,6 +19,7 @@ const Pins: React.FC = () => {
     const [formData, setFormData] = useState<{ job_id: string, title: string, year: number, douban_rating: string }>({
         job_id: '', title: '', year: 1900, douban_rating: ''
     })
+    const [editingId, setEditingId] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
 
     const refresh = async () => {
@@ -29,18 +30,43 @@ const Pins: React.FC = () => {
 
     useEffect(() => { refresh() }, [])
 
-    const add = async () => {
+    const save = async () => {
         if (!supabase) return
         setLoading(true)
-        await supabase.from('river_pins').insert({
+
+        const payload = {
             job_id: formData.job_id.trim(),
             title: formData.title.trim(),
             year: formData.year,
             douban_rating: formData.douban_rating ? parseFloat(formData.douban_rating) : null
-        })
-        setFormData({ job_id: '', title: '', year: 1900, douban_rating: '' })
+        }
+
+        if (editingId) {
+            // Update existing
+            await supabase.from('river_pins').update(payload).eq('id', editingId)
+        } else {
+            // Insert new
+            await supabase.from('river_pins').insert(payload)
+        }
+
+        resetForm()
         setLoading(false)
         refresh()
+    }
+
+    const startEdit = (row: PinRow) => {
+        setEditingId(row.id)
+        setFormData({
+            job_id: row.job_id,
+            title: row.title,
+            year: row.year,
+            douban_rating: row.douban_rating ? String(row.douban_rating) : ''
+        })
+    }
+
+    const resetForm = () => {
+        setEditingId(null)
+        setFormData({ job_id: '', title: '', year: 1900, douban_rating: '' })
     }
 
     const remove = async (id: string) => {
@@ -52,7 +78,7 @@ const Pins: React.FC = () => {
     return (
         <div className="space-y-6">
             <div className="bg-white p-4 rounded shadow mb-6">
-                <h3 className="text-lg font-bold mb-4">添加播客锚点</h3>
+                <h3 className="text-lg font-bold mb-4">{editingId ? '编辑播客锚点' : '添加播客锚点'}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
                     <div>
                         <label className="block text-xs text-gray-500 mb-1">任务ID (Job ID)</label>
@@ -70,7 +96,16 @@ const Pins: React.FC = () => {
                         <label className="block text-xs text-gray-500 mb-1">豆瓣评分 (Optional)</label>
                         <input type="number" step="0.1" value={formData.douban_rating} onChange={e => setFormData({ ...formData, douban_rating: e.target.value })} placeholder="8.5" className="border w-full px-3 py-2 rounded" />
                     </div>
-                    <button disabled={loading} onClick={add} className="bg-amber-600 hover:bg-amber-700 text-white rounded px-4 py-2 font-medium h-10">{loading ? '保存中...' : '保存'}</button>
+                    <div className="flex gap-2">
+                        <button disabled={loading} onClick={save} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white rounded px-4 py-2 font-medium h-10">
+                            {loading ? '保存中...' : (editingId ? '更新' : '添加')}
+                        </button>
+                        {editingId && (
+                            <button onClick={resetForm} className="bg-stone-200 hover:bg-stone-300 text-stone-700 rounded px-3 py-2 font-medium h-10">
+                                取消
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -87,12 +122,13 @@ const Pins: React.FC = () => {
                     </thead>
                     <tbody>
                         {rows.map(r => (
-                            <tr key={r.id} className="border-t hover:bg-stone-50">
+                            <tr key={r.id} className={`border-t hover:bg-stone-50 ${editingId === r.id ? 'bg-amber-50' : ''}`}>
                                 <td className="px-3 py-2">{r.year}</td>
                                 <td className="px-3 py-2 font-medium">{r.title}</td>
                                 <td className="px-3 py-2 font-mono text-xs text-stone-500">{r.job_id}</td>
                                 <td className="px-3 py-2 text-xs">{r.douban_rating || '-'}</td>
-                                <td className="px-3 py-2 text-center">
+                                <td className="px-3 py-2 text-center space-x-3">
+                                    <button className="text-blue-600 hover:underline" onClick={() => startEdit(r)}>编辑</button>
                                     <button className="text-red-600 hover:underline" onClick={() => remove(r.id)}>删除</button>
                                 </td>
                             </tr>
