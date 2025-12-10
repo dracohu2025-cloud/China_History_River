@@ -34,53 +34,9 @@ module.exports = {
     },
 
     // ============================================
-    // Express API 服务器 - AI 内容生成
+    // 注意: Django 和 Express 服务已移除
+    // 项目已迁移到纯 Serverless 架构 (Supabase + Vercel)
     // ============================================
-    {
-      name: 'history-river-api',
-      cwd: './history_river',
-      script: './server/index.js',
-      interpreter: 'node',
-      env: {
-        NODE_ENV: 'development',
-        PORT: 4000,
-      },
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: '300M',
-      error_file: './logs/api-error.log',
-      out_file: './logs/api-out.log',
-      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-      merge_logs: true,
-    },
-
-    // ============================================
-    // Django 后端 - Timeline API
-    // ============================================
-    {
-      name: 'history-river-django',
-      cwd: './history_river/dj_backend',
-      script: './venv/bin/python',
-      args: 'manage.py runserver 8001',
-      interpreter: 'none',
-      env: {
-        DJANGO_SETTINGS_MODULE: 'dj_backend.settings',
-        PYTHONUNBUFFERED: '1',
-        DJANGO_ALLOWED_HOSTS: 'localhost,127.0.0.1,history-timeline.aigc24.com,.aigc24.com',
-        OPENROUTER_API_KEY: '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',
-        Default_LLM_Model: 'deepseek/deepseek-v3.2-exp',
-      },
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: '400M',
-      error_file: './logs/django-error.log',
-      out_file: './logs/django-out.log',
-      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-      merge_logs: true,
-    },
-
 
   ],
 

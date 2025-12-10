@@ -34,25 +34,24 @@ help:
 # ============================================
 
 all-dev:
-	@echo "$(BLUE)🚀 启动所有开发服务...$(NC)"
+	@echo "$(BLUE)🚀 启动开发服务...$(NC)"
 	@echo "$(YELLOW)前端 (Vite): http://localhost:3000$(NC)"
-	@echo "$(YELLOW)Express API: http://localhost:4000$(NC)"
-	@echo "$(YELLOW)Django: http://localhost:8000$(NC)"
+	@echo "$(YELLOW)架构: 纯 Serverless (Supabase + Vercel Functions)$(NC)"
 	@echo ""
-	@echo "$(YELLOW)在新的终端窗口中运行以下命令:$(NC)"
+	@echo "$(YELLOW)在终端窗口中运行以下命令:$(NC)"
 	@echo "  cd history_river && npm run dev"
-	@echo "  cd history_river && npm run server"
-	@echo "  cd history_river/dj_backend && python manage.py runserver"
 	@echo ""
+	@echo "$(GREEN)✓ 无需 Django/Express 后端$(NC)"
+	@echo "$(GREEN)✓ Supabase 提供数据 API$(NC)"
+	@echo "$(GREEN)✓ Vercel 提供 AI 无服务器函数$(NC)"
 
 
 all-stop:
-	@echo "$(BLUE)⏹️  停止所有开发服务...$(NC)"
+	@echo "$(BLUE)⏹️  停止开发服务...$(NC)"
 	@pkill -f "vite" || echo "$(YELLOW)Vite 未运行$(NC)"
-	@pkill -f "node server/index.js" || echo "$(YELLOW)Express 未运行$(NC)"
-	@pkill -f "python manage.py runserver" || echo "$(YELLOW)Django 未运行$(NC)"
 
-	@echo "$(GREEN)✓ 所有服务已停止$(NC)"
+	@echo "$(GREEN)✓ 服务已停止$(NC)"
+	@echo "$(YELLOW)注: Supabase/Vercel 为远程服务，无需停止$(NC)"
 
 .DEFAULT_GOAL := help
 

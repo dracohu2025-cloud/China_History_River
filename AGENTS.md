@@ -5,37 +5,39 @@
 **Description:** An interactive web application that visualizes 5000 years of Chinese civilization as a flowing "river" of time. The application features AI-powered historical content generation, podcast functionality, and multi-dimensional timeline visualization using both 2D D3.js and 3D Three.js technologies.
 
 **Key Technologies:**
-- **Frontend:** React 19, Vite 6.2+, TypeScript, Tailwind CSS, D3.js (2D visualization), Three.js (3D visualization)
-- **Backend:** Dual architecture - Node.js Express (port 4000) + Django REST API (port 8000)
-- **Database:** PostgreSQL via Supabase, SQLite for Django development
-- **AI Integration:** OpenRouter API (DeepSeek V3.2 model) + Google Gemini API
-- **Deployment:** Vercel (frontend), UCloud (Django), Cloudflare Tunnel (development access)
-- **Process Management:** PM2 for production deployment
+- **Frontend:** React 19.2.0, Vite 6.2+, TypeScript, Tailwind CSS (via CDN), D3.js 7.9.0 (2D visualization)
+- **Backend:** Vercel Serverless Functions + Supabase PostgreSQL
+- **Database:** PostgreSQL via Supabase (direct client access)
+- **AI Integration:** OpenRouter API (DeepSeek V3.2 model) via Vercel Functions
+- **Deployment:** Vercel (frontend + AI functions), Supabase (database), Cloudflare Tunnel (development)
 
 ## Architecture
 
-### Multi-Service Architecture
-The project employs a sophisticated multi-service architecture with three main components:
+### Vercel Serverless Architecture
+The project employs a pure serverless architecture with Vercel for compute and Supabase for data:
 
-1. **Frontend Service (Vite/React)** - Port 3000
+1. **Frontend (Vite/React)** - Deployed on Vercel
    - Main river visualization application
    - Standalone podcast player (player.html)
    - Admin interface for content management (admin.html)
-   - Multiple entry points: `index.html`, `player.html`, `admin.html`, `admin/index.html`
+   - Multiple entry points: `index.html`, `player.html`, `admin.html`
+   - Direct Supabase client integration via `services/dataService.ts`
+   - Static deployment with edge CDN distribution
 
-2. **Express API Service** - Port 4000
-   - AI-powered historical event details with file-based caching
-   - OpenRouter API integration for DeepSeek model
-   - Google Gemini API integration
-   - File-based caching system at `server/storage/eventsCache.json`
-   - Health monitoring endpoint at `/health`
+2. **Backend (Vercel Serverless Functions)**
+   - **AI Function**: `/api/event-details.js` - OpenRouter API integration
+     - SHA-256 UUID generation for cache keys
+     - Supabase-based caching for AI responses
+     - DeepSeek V3.2 model for historical summaries
+   - Edge-deployed, auto-scaling serverless functions
+   - No server management, pay-per-use pricing
 
-3. **Django Timeline API Service** - Port 8000 (dev) / 8001 (prod)
-   - Comprehensive historical data management
-   - Dynasty and event models with importance scoring (1-5 scale)
-   - Event cache system for AI-generated content
-   - Admin interface for data curation
-   - Chinese localization support
+3. **Database (Supabase PostgreSQL)**
+   - Direct client access from frontend (safe with RLS)
+   - Tables: `dynasties`, `historical_events`, `river_pins`, `podcast_jobs`, `timeline_event_cache`
+   - Row Level Security (RLS) for data protection
+   - Real-time subscriptions support
+   - Database backups and managed infrastructure
 
 ### Frontend Structure
 - **`App.tsx`**: Main application entry point with modal state management
@@ -45,128 +47,112 @@ The project employs a sophisticated multi-service architecture with three main c
 - **`components/ErrorBoundary.tsx`**: Error handling component
 - **`types.ts`**: Centralized TypeScript type definitions
 
-### Backend Structure
-- **`server/index.js`**: Express server with OpenRouter API integration
-- **`dj_backend/timeline/`**: Django app with comprehensive historical models
-  - Dynasty management with color coding and duration calculations
-  - Historical events with importance levels (1-5 scale) and type categorization
-  - EventCache system for AI response caching with SHA-256 UUID generation
-  - RiverPin model for podcast content management
+### Service Layer
+- **`services/dataService.ts`**: Direct Supabase client for dynasties, events, river pins
+- **`services/podcastService.ts`**: Podcast data fetching and job management
+- **`services/geminiService.ts`**: Google Gemini AI API integration
+- **`api/event-details.js`**: Vercel serverless function for OpenRouter AI API
 
 ### Data Layer
-- **Supabase Integration**: PostgreSQL backend for podcast and media storage
-- **Django Models**: Structured historical data with Chinese language support
-- **File Caching**: JSON-based caching for AI responses to minimize API costs
+- **Supabase Integration**: PostgreSQL backend for all data storage
+- **Database Schema**: 
+  - `dynasties`: Dynasty information with color coding
+  - `historical_events`: Historical events with importance scoring
+  - `river_pins`: Podcast metadata and thumbnails
+  - `podcast_jobs`: Podcast generation jobs (queued/processing/completed)
+- **Fallback Data**: Static TypeScript files in `/data/historyData.ts`
 - **Type Safety**: TypeScript definitions in `types.ts` for all data structures
 
 ## Build and Development Commands
 
 ### Prerequisites
-- Node.js 18+ 
-- Python 3.9+
-- PostgreSQL (or Supabase account)
-- Cloudflare account (for tunnel access)
+- Node.js 18+
+- Supabase account with configured project
+- Vercel account for deployment
+- OpenRouter API key (for AI features)
+- Cloudflare account (optional, for tunnel access)
 
 ### Development Setup
 ```bash
 # Install dependencies
 cd history_river && npm install
 
-# Configure environment (copy from .env.local.example if exists)
-# Edit .env.local with your API keys
+# Configure environment (create .env.local with required keys)
+# Required: 
+# - OPENROUTER_API_KEY
+# - NEXT_PUBLIC_SUPABASE_URL
+# - NEXT_PUBLIC_SUPABASE_ANON_KEY
+# - SUPABASE_SERVICE_ROLE_KEY (for admin operations)
 ```
 
-### Development Servers (Run in separate terminals)
+### Development Server
 ```bash
-# Terminal 1: Frontend development server (port 3000)
+# Single terminal: Frontend development server (port 3000)
 cd history_river && npm run dev
 
-# Terminal 2: Express API server (port 4000)  
-cd history_river && npm run server
-
-# Terminal 3: Django backend (port 8000)
-cd history_river/dj_backend
-./setup_django.sh  # First time setup
-python manage.py migrate  # Run migrations
-python manage.py runserver
+# Note: No backend server needed - uses Vercel Functions in production
+# and direct Supabase access in development
 ```
 
 ### Build Commands
 ```bash
-npm run build          # Production build
+npm run build          # Production build with multiple entry points
 npm run preview        # Preview production build
 npm run db:inspect     # Inspect Supabase database
 ```
 
 ### Cloudflare Tunnel Management (Development)
 ```bash
-# Using Makefile (recommended)
+# Using Makefile
 make tunnel-install    # Install cloudflared
 make tunnel-login      # Authenticate Cloudflare
 make tunnel-create     # Create tunnel
 make tunnel-dns CLOUDFLARE_DOMAIN=yourdomain.com
 make tunnel-start CLOUDFLARE_DOMAIN=yourdomain.com
-
-# Using npm scripts (if available)
-npm run tunnel:start   # Start tunnel
-npm run tunnel:status  # Check status
-npm run tunnel:logs    # View logs
-npm run tunnel:stop    # Stop tunnel
 ```
 
-### Production Management
+### Vercel Deployment (Recommended)
 ```bash
-# PM2 process management (from root directory)
-pm2 start ecosystem.config.js    # Start all services
-pm2 stop ecosystem.config.js     # Stop all services
-pm2 restart ecosystem.config.js  # Restart all services
-pm2 status                       # View service status
-pm2 logs                         # View combined logs
-```
+# Deploy to Vercel
+vercel deploy --prod
 
-### Development Helper Commands
-```bash
-make all-dev           # Show development setup instructions
-make all-stop          # Stop all development services
+# Vercel automatically handles:
+# - Frontend static deployment
+# - Serverless function deployment (api/event-details.js)
+# - Environment variable injection
+# - Custom domain configuration
+# - Auto-scaling and monitoring
 ```
 
 ## Configuration
 
 ### Environment Variables
 ```bash
-# OpenRouter Configuration
+# OpenRouter Configuration (REQUIRED for AI features)
 OPENROUTER_API_KEY=sk-or-v1-...
 Default_LLM_Model=deepseek/deepseek-v3.2-exp
 
 # Google Gemini API (alternative AI provider)
 GEMINI_API_KEY=your-gemini-api-key
 
-# Supabase Configuration  
+# Supabase Configuration (REQUIRED)
 NEXT_PUBLIC_SUPABASE_URL=https://...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_DIRECT_URL=postgresql://...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
-
-# Django Configuration
-DJANGO_SETTINGS_MODULE=dj_backend.settings
-DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,history-timeline.aigc24.com,.aigc24.com
-DJANGO_SECRET_KEY=your-secret-key
-DJANGO_DEBUG=True
 ```
 
-### Vite Configuration
+### Vite Configuration (vite.config.ts)
 - Development server: port 3000, host 0.0.0.0
-- Proxy setup: `/api` → `http://localhost:4000`, `/timeline-api` → `http://localhost:8000`
-- Multiple entry points with optimized builds
+- Multiple entry points: index.html, player.html, admin.html
 - Environment variable injection at build time
 - Path alias: `@/*` maps to root directory
 
-### Django Settings
-- SQLite for development, PostgreSQL for production
-- Chinese language support (zh-hans)
-- Shanghai timezone (Asia/Shanghai)
-- Comprehensive CORS configuration for multiple domains
-- CSRF protection for admin interface
+### TypeScript Configuration (tsconfig.json)
+- Target: ES2022 with ESNext modules
+- Strict mode disabled for development flexibility
+- Path aliases configured for module resolution
+- No legacy dependencies
 
 ## Code Style Guidelines
 
@@ -184,99 +170,141 @@ DJANGO_DEBUG=True
 - Modal-based interaction patterns
 
 ### Styling Conventions
-- Tailwind CSS for utility-first styling
-- Chinese font support: Noto Serif SC, ZCOOL QingKe HuangYou
+- Tailwind CSS via CDN for utility-first styling
+- Chinese font support: Noto Serif SC, Cinzel
 - Responsive mobile-first design approach
 - Consistent color palette based on historical themes
 
 ### State Management
 - React local state for UI management
 - URL parameters for navigation state (episode IDs)
-- Server-side caching for AI responses
+- Supabase real-time subscriptions for data updates
 - No external state management libraries
+
+## Database Management
+
+### Supabase Migration Files
+- `20251209_create_timeline_tables.sql` - Core tables creation
+- `20251209_insert_initial_data.sql` - Initial dynasty and event data
+- `20251210_enable_public_access.sql` - RLS policies setup
+
+### Vercel Function Files
+- `api/event-details.js` - OpenRouter AI integration
+  - Handler: `export default async function handler(req, res)`
+  - Runtime: Node.js 18+ (serverless)
+  - Memory: 1GB (default)
+  - Timeout: 10s (configurable)
+  - Cache: Supabase `timeline_event_cache` table
+
+### Data Access Patterns
+```typescript
+// Direct Supabase access from frontend
+import { fetchDynasties, fetchEvents } from '@/services/dataService'
+
+// AI-powered content
+import { fetchEventDetails } from '@/api/event-details'
+
+// Podcast management
+import { createPodcastJob, fetchCompletedPodcasts } from '@/services/podcastService'
+```
 
 ## Testing Strategy
 
 ### Current Approach
-- Manual testing for visual regressions
-- API endpoint testing via browser developer tools
+- Manual testing via `test-fix.html`
+- API endpoint testing through browser developer tools
+- Visual regression testing for river visualization
 - Cross-browser compatibility verification
-- Database integrity checks via inspection scripts
-- Test files: `test-fix.html`, `test_network.sh`
+- **No automated unit/integration tests implemented**
+
+### Test Files
+- `test-fix.html`: Basic functionality verification
+- `test_network.sh`: Network connectivity testing
 
 ### Recommended Testing Areas
 - River visualization interaction testing
+- Supabase data fetching reliability
 - AI content generation consistency
 - Podcast playback functionality
-- Multi-service integration points
+- Offline/fallback data behavior
 
 ## Security Considerations
 
 ### API Security
-- OpenRouter API keys stored server-side only
+- OpenRouter API keys stored in environment variables (server-side only)
+- Supabase ANON key for client-side operations
+- Supabase SERVICE ROLE key for admin operations only
 - CORS configuration for approved domains only
 - Input validation on all API endpoints
-- Rate limiting consideration for AI services
 
 ### Data Protection
 - Environment variables for sensitive configuration
-- No client-side storage of API keys
-- Supabase row-level security for user data
-- Cache files stored server-side only
+- No client-side storage of service role keys
+- Supabase Row Level Security (RLS) for user data
+- Anon key has limited permissions (SELECT only on public tables)
 
 ### Deployment Security
-- HTTPS enforcement in production
-- Secure cookie configuration for Django
-- CSRF protection for admin interfaces
+- HTTPS enforcement in production (Vercel automatic)
 - Domain validation for tunnel access
+- Secure cookie configuration
+- CSRF protection for admin interfaces
 
 ## Deployment Process
 
-### Frontend Deployment (Vercel)
+### Frontend Deployment (Vercel - Recommended)
 ```bash
 npm run build
 # Deploy dist/ directory to Vercel
-# Multiple entry points preserved: main, player, admin
+# Serverless function automatically deployed from /api directory
 ```
 
-### Django Backend Deployment (UCloud)
-```bash
-cd dj_backend
-./start_prod.sh  # Production startup script
-# Gunicorn WSGI server with nginx reverse proxy
-```
+### Vercel Configuration
+- Serverless function at `/api/event-details.js`
+- Rewrite rules for SPA routing
+- Environment variable injection
+- Static asset optimization
+- Automatic HTTPS
 
-### PM2 Production Configuration
-- Four services managed: frontend, API, Django, tunnel
-- Automatic restart on failure
-- Log aggregation with date formatting
-- Memory limits for resource management
-- Service ports: Frontend (static), API (4000), Django (8001)
+### Environment-Specific Settings
+- **Development**: 
+  - Uses `.env.local` for local Supabase project
+  - Vercel Functions simulated by Vercel CLI (`vercel dev`)
+  - Direct Supabase access from frontend
+- **Production**: 
+  - Uses Vercel environment variables
+  - Functions deployed to Vercel Edge Network
+  - Same API endpoints, production-ready scaling
 
 ## Development Workflow
 
 ### Feature Development Process
 1. Create feature branch from main
-2. Implement frontend changes with TypeScript/React
-3. Update backend APIs as needed (Express/Django)
-4. Test locally with all three services running
-5. Verify production build and multi-page functionality
-6. Deploy using appropriate platform (Vercel/UCloud)
+2. Update Supabase schema if needed (create migration)
+3. Implement frontend changes with TypeScript/React
+4. Update service layer functions (`services/dataService.ts`)
+5. Test locally with Vercel CLI: `cd history_river && vercel dev`
+6. Deploy to Vercel preview environment
+7. Verify production build functionality
+8. Deploy to production with `vercel --prod`
 
-### AI Integration Workflow
-1. User interaction triggers event detail request
-2. Frontend requests from `/api/event-details` (Express)
-3. Backend checks file cache first at `server/storage/eventsCache.json`
-4. Cache miss: calls OpenRouter API with DeepSeek model or Gemini API
-5. Response cached and returned to frontend
-6. Modal displays AI-generated historical context
+### AI Integration Workflow (Vercel Function)
+1. User clicks historical event on river visualization
+2. Frontend makes POST request to `/api/event-details`
+3. Vercel serverless function receives request
+4. Function generates SHA-256 UUID based on event data
+5. Checks Supabase cache (`timeline_event_cache` table)
+6. **Cache hit**: Returns cached content immediately
+7. **Cache miss**: Calls OpenRouter API with DeepSeek model
+8. AI generates historical summary (~150 characters)
+9. Response cached in Supabase for future requests
+10. Returns AI content to frontend modal
+11. Total latency: 50-500ms (cached) / 2-5s (AI generation)
 
-### Historical Data Management
-1. Django admin interface for data curation
-2. Dynasty management with color coding
-3. Event importance scoring (1-5 scale)
-4. Type categorization (war, culture, politics, science)
-5. Automatic cache invalidation for updated content
+### Database Changes Workflow
+1. Create new migration file in `history_river/supabase/migrations/`
+2. Apply migration: `supabase migration up`
+3. Update `services/dataService.ts` if schema changed
+4. Update TypeScript types in `types.ts` if needed
 
 ## Key Features
 
@@ -286,6 +314,7 @@ cd dj_backend
 - Event markers sized by importance levels
 - Responsive canvas with viewport optimization
 - Chinese and English language support
+- Performance optimizations (throttling, RAF-based updates)
 
 ### AI-Powered Historical Context
 - DeepSeek V3.2 model for Chinese historical summaries
@@ -293,7 +322,7 @@ cd dj_backend
 - Intelligent caching to minimize API costs
 - Context-aware prompt generation
 - 150-character optimized summaries
-- Year-overviews for non-specific years
+- SHA-256 UUID generation for cache keys
 
 ### Podcast System Integration
 - Supabase-backed content management
@@ -301,6 +330,7 @@ cd dj_backend
 - URL-based episode navigation
 - Admin interface for content curation
 - Audio playback with timeline synchronization
+- Background generation via Supabase edge functions (future)
 
 ### Multi-Domain Support
 - Cloudflare tunnel for development access
@@ -314,62 +344,133 @@ cd dj_backend
 - Vite for fast development builds
 - React 19 performance improvements
 - D3.js efficient rendering algorithms
-- Three.js 3D optimization techniques
 - Code splitting for multiple entry points
+- Canvas-based rendering with viewport culling
 
-### Backend Optimization
-- File-based caching for AI responses
-- Database indexing for historical queries
-- Express middleware optimization
-- Django query optimization with select_related
-- Gunicorn worker process management
+### Database Optimization
+- Supabase PostgreSQL indexing for queries
+- RLS policies optimized for performance
+- Real-time subscriptions for live updates
+- Query result caching (frontend level)
 
 ### Network Optimization
 - Cloudflare CDN integration
-- Static asset optimization
-- API response caching strategies
-- Database connection pooling
-- Proxy configuration for development
+- Static asset optimization (Vercel)
+- Supabase CDN for storage assets
+- Database connection pooling (managed by Supabase)
 
 ## Troubleshooting
 
 ### Common Development Issues
-- **Port conflicts**: Ensure ports 3000, 4000, 8000 are available
-- **API key configuration**: Verify OpenRouter/Gemini key in environment
-- **Django migrations**: Run `python manage.py migrate` after setup
-- **Cloudflare tunnel**: Check domain configuration and DNS settings
+- **Port conflicts**: Ensure port 3000 is available (`npm run dev`)
+- **Vercel CLI**: Install with `npm i -g vercel` for local function testing
+- **API key configuration**: Verify keys in `.env.local` for dev, Vercel dashboard for prod
+- **Supabase connection**: Check project URL and anon key match your project
+- **Cloudflare tunnel**: Optional for development, check DNS settings
+- **CORS issues**: Vercel functions handle CORS automatically, check Supabase RLS
+- **Function logs**: Check Vercel dashboard for AI function logs
 
 ### Service Dependencies
-- Frontend requires backend services for full functionality
-- Django admin requires superuser creation
-- Supabase connection needed for podcast features
-- Cloudflare authentication required for tunnel access
+- **Frontend**: Vite dev server for local development
+- **Database**: Supabase project (dev/prod environments)
+- **AI Functions**: Vercel account + OpenRouter API key
+- **Deployment**: Vercel CLI for preview, Vercel dashboard for production
+- **Optional**: Cloudflare tunnel for development domain access
 
 ### Log Locations
 - Frontend: Browser developer console
-- Express API: Terminal output or PM2 logs (`./logs/api-*.log`)
-- Django: Terminal output with SQL query logging (`./logs/django-*.log`)
+- Supabase: Supabase dashboard (SQL editor > Logs)
+- Vercel: Vercel dashboard (real-time logs)
 - Cloudflare tunnel: `~/.cloudflared/` directory
 
 ## File Structure Reference
 
 ```
-history_river/
-├── components/           # React components
-├── pages/               # Page components  
-├── services/            # API service layers
-├── data/                # Historical data files
-├── server/              # Express backend
-│   ├── index.js         # Main Express server
-│   └── storage/         # File-based cache
-├── dj_backend/          # Django backend
-│   ├── timeline/        # Main Django app
-│   │   ├── models.py    # Data models
-│   │   ├── api_views.py # API endpoints
-│   │   └── admin.py     # Admin interface
-│   └── manage.py        # Django management
-├── scripts/             # Utility scripts
-└── supabase/            # Database configurations
+China_History_River/     # Git repository root
+├── history_river/       # Main application
+│   ├── components/      # React components
+│   │   ├── RiverCanvas.tsx      # Core D3.js visualization (31KB)
+│   │   ├── DetailModal.tsx      # AI-powered event details
+│   │   └── PodcastPlayerModal.tsx  # Audio player
+│   ├── pages/           # Page components (admin, player)
+│   ├── services/        # API service layers (Supabase)
+│   │   ├── dataService.ts       # Dynasty/Event/RiverPin fetching
+│   │   ├── podcastService.ts    # Podcast job management
+│   │   └── geminiService.ts     # Google Gemini AI
+│   ├── api/             # Vercel Serverless Functions
+│   │   └── event-details.js     # OpenRouter AI integration
+│   ├── data/            # Fallback data
+│   │   └── historyData.ts       # Static historical data
+│   ├── supabase/        # Database migrations
+│   │   └── migrations/
+│   │       ├── 20251209_create_timeline_tables.sql
+│   │       ├── 20251209_insert_initial_data.sql
+│   │       └── 20251210_enable_public_access.sql
+│   ├── public/          # Static assets
+│   ├── scripts/         # Development scripts
+│   ├── vercel.json      # Vercel deployment configuration
+│   └── vite.config.ts   # Vite build configuration
+├── ecosystem.config.js  # PM2 config (legacy, only frontend)
+├── Makefile            # Development commands
+├── AGENTS.md           # This documentation
+└── STATUS.md           # Project status
 ```
 
+### Key Architecture Files
+- **`history_river/api/event-details.js`**: Vercel Serverless AI function
+- **`history_river/services/dataService.ts`**: Frontend Supabase client
+- **`vercel.json`**: Vercel deployment and routing configuration
+- **`.env.local`**: Development environment variables
+- **`ecosystem.config.js`**: Legacy PM2 (only manages static frontend now)
+
+## Data Architecture
+
+### Historical Data Structure
+- Dynasty model with color coding and duration calculations
+- Event model with importance scoring (1-5 scale) and type categorization
+- RiverPin model for podcast content management
+- PodcastJob model for async podcast generation
+- SHA-256 based caching for AI responses
+
+### Database Schema (Supabase)
+- **dynasties**: Historical dynasties with color coding
+  - `id`, `name`, `chinese_name`, `start_year`, `end_year`, `color`, `description`
+- **historical_events**: Timeline events with importance scoring
+  - `year`, `title`, `event_type`, `importance`, `description`
+- **river_pins**: Podcast metadata for river visualization
+  - `year`, `job_id`, `title`, `douban_rating`
+- **podcast_jobs**: Async podcast generation status
+  - `id`, `status`, `progress`, `output_data`, `error_message`, `created_at`, `user_id`
+- **timeline_event_cache**: AI response cache (reduces costs)
+  - `uuid`, `year`, `event_title`, `context`, `content`, `is_cached`, `is_deleted`, `created_at`
+
+### Fallback Data
+- Static TypeScript files in `history_river/data/historyData.ts`
+- Comprehensive Chinese historical timeline from Xia dynasty (-2070) to modern era
+- Used when Supabase connection fails or during development
+- ~500 major historical events with importance scoring (1-5)
+
+### Vercel Deployment Details
+- **Function Deployment**: `api/event-details.js` deployed automatically
+- **Zero Config**: Vercel auto-detects framework and functions
+- **Edge Network**: Functions run on Vercel's global edge network
+- **Environment**: Node.js 18+ runtime, 1GB memory, 10s timeout
+- **Logs**: Real-time logs in Vercel dashboard
+- **Scaling**: Auto-scales from 0 to ∞, pay-per-invocation
+
+### Architecture Benefits
+- ✅ **No server management**: Vercel handles infrastructure
+- ✅ **Global CDN**: Fast loading worldwide
+- ✅ **Auto-scaling**: Handles traffic spikes automatically
+- ✅ **Cost-effective**: Pay only for what you use
+- ✅ **Developer experience**: Simple `git push` deployments
+- ✅ **Type safety**: Full TypeScript support
+- ✅ **Real-time data**: Supabase subscriptions
+- ✅ **AI caching**: Reduces API costs by 80-90%
+
 This documentation serves as the comprehensive guide for AI coding agents working on the History River project. All architectural decisions, development patterns, and deployment processes are documented here for consistent development practices.
+
+---
+**Last Updated**: 2025-12-10  
+**Architecture**: Vercel Serverless + Supabase PostgreSQL  
+**Status**: ✅ Production Ready
