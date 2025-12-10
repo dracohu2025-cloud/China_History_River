@@ -98,7 +98,7 @@ export async function getPodcastById(jobId: string): Promise<PodcastJobRow | nul
       .from('jobs')
       .select('*')
       .eq('id', jobId)
-      .single()
+      .maybeSingle()
     if (!error && data) {
       const jobData = data as PodcastJobRow
       // 如果 jobs 表中没有 thumbnail_url，尝试从 podcasts 表获取
@@ -107,7 +107,7 @@ export async function getPodcastById(jobId: string): Promise<PodcastJobRow | nul
           .from('podcasts')
           .select('thumbnail_url')
           .eq('id', jobId)
-          .single()
+          .maybeSingle()
         if (pData && pData.thumbnail_url) {
           jobData.thumbnail_url = pData.thumbnail_url
         }
@@ -119,7 +119,7 @@ export async function getPodcastById(jobId: string): Promise<PodcastJobRow | nul
       .from('podcasts')
       .select('id,user_id,title,script,audio_path,thumbnail_url,total_duration,created_at')
       .eq('id', jobId)
-      .single()
+      .maybeSingle()
     if (!pData) return null
     const row = pData as PodcastsRow
     const path = (row.audio_path || '').replace(/^\//, '')
