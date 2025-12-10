@@ -142,6 +142,7 @@ const PlayerPage: React.FC = () => {
       <div className="fixed bottom-0 left-0 bg-blue-900/90 text-white p-2 text-[10px] m-2 rounded z-50 pointer-events-auto break-all max-w-[80vw]">
         <p>Audio URL: {output?.audioUrl || 'EMPTY'}</p>
         <p>Status: {job?.status || 'UNKNOWN'}</p>
+        <p className="text-red-300">Log: {job?.error_message || 'None'}</p>
       </div>
     </div>
   )

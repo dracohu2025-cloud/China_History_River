@@ -157,10 +157,15 @@ export async function getPodcastById(jobId: string): Promise<PodcastJobRow | nul
     // Check if we need to fetch missing data from podcasts table (thumbnail or audio)
     if (!jobData.thumbnail_url || !jobData.output_data.audioUrl) {
       const pUrl = `${BASE_URL}/rest/v1/podcasts?select=thumbnail_url,audio_path` + `&id=eq.${encodeURIComponent(jobId)}`
+      // DEBUG: Log attempt
+      jobData.error_message = (jobData.error_message || '') + ` [Patching: ${pUrl}]`
+
       const pRes = await fetch(pUrl, { headers })
 
       if (pRes.ok) {
         const pArr: { thumbnail_url?: string; audio_path?: string }[] = await pRes.json()
+        jobData.error_message += ` [Res: OK, Len: ${pArr?.length}]`
+
         if (pArr && pArr.length) {
           const pRow = pArr[0]
 
@@ -175,8 +180,13 @@ export async function getPodcastById(jobId: string): Promise<PodcastJobRow | nul
             const path = pRow.audio_path.replace(/^\//, '')
             jobData.output_data.audioUrl = `${BASE_URL}/storage/v1/object/public/${bucket}/${path}`
             jobData.output_data.audioPath = path
+            jobData.error_message += ` [Audio Patched: ${path}]`
+          } else {
+            jobData.error_message += ` [Audio Not Patched: ${pRow.audio_path ? 'Path Exists' : 'No Path'}]`
           }
         }
+      } else {
+        jobData.error_message += ` [Res: Fail ${pRes.status}]`
       }
     }
 
