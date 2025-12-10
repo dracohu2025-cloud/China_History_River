@@ -12,17 +12,17 @@ const PlayerPage: React.FC = () => {
 
   useEffect(() => {
     let mounted = true
-    ;(async () => {
-      setLoading(true)
-      const [data, pinData] = episode ? await Promise.all([
-        getPodcastById(episode),
-        getRiverPinByJobId(episode)
-      ]) : [null, null];
-      if (!mounted) return
-      setJob(data)
-      setRiverPin(pinData)
-      setLoading(false)
-    })()
+      ; (async () => {
+        setLoading(true)
+        const [data, pinData] = episode ? await Promise.all([
+          getPodcastById(episode),
+          getRiverPinByJobId(episode)
+        ]) : [null, null];
+        if (!mounted) return
+        setJob(data)
+        setRiverPin(pinData)
+        setLoading(false)
+      })()
     return () => { mounted = false }
   }, [episode])
 
@@ -65,9 +65,9 @@ const PlayerPage: React.FC = () => {
             <div className="col-span-12 lg:col-span-8">
               <div className="w-full bg-black rounded-lg overflow-hidden border border-[#1f2a44] flex items-center justify-center min-h-[46vh] lg:min-h-[60vh]">
                 {segments?.[currentIndex]?.generatedImageUrl ? (
-                  <img 
-                    src={segments[currentIndex].generatedImageUrl} 
-                    alt={`seg-${currentIndex}`} 
+                  <img
+                    src={segments[currentIndex].generatedImageUrl}
+                    alt={`seg-${currentIndex}`}
                     className="max-w-full max-h-full object-contain"
                     loading="eager"  // 封面图片立即加载
                   />
@@ -86,7 +86,7 @@ const PlayerPage: React.FC = () => {
                     const s = segments[i]
                     const start = s.startTime ?? acc
                     const dur = s.estimatedDuration ?? 0
-                    const end = dur ? start + dur : (segments[i+1]?.startTime ?? start + 1)
+                    const end = dur ? start + dur : (segments[i + 1]?.startTime ?? start + 1)
                     acc = end
                   }
                   const s = segments[idx]
@@ -95,7 +95,7 @@ const PlayerPage: React.FC = () => {
                   const mm = String(Math.floor(t / 60)).padStart(2, '0')
                   const ss = String(t % 60).padStart(2, '0')
                   return (
-                    <button key={idx} onClick={() => { if (audioRef.current) { audioRef.current.currentTime = t } setCurrentIndex(idx) }} className={`w-full text-left rounded-lg border ${active ? 'border-amber-500 bg-[#182235]' : 'border-[#1f2a44] bg-[#0f172a]' } p-3 hover:border-amber-500`}>
+                    <button key={idx} onClick={() => { if (audioRef.current) { audioRef.current.currentTime = t } setCurrentIndex(idx) }} className={`w-full text-left rounded-lg border ${active ? 'border-amber-500 bg-[#182235]' : 'border-[#1f2a44] bg-[#0f172a]'} p-3 hover:border-amber-500`}>
                       <div className="flex justify-between items-center mb-2">
                         <div className={`text-xs ${active ? 'text-amber-400' : 'text-stone-400'}`}>{seg.speaker}</div>
                         <div className="text-xs text-stone-400">{mm}:{ss}</div>
@@ -122,7 +122,7 @@ const PlayerPage: React.FC = () => {
                       const s = segments[i]
                       const start = s.startTime ?? acc
                       const dur = s.estimatedDuration ?? 0
-                      const end = dur ? start + dur : (segments[i+1]?.startTime ?? start + 1)
+                      const end = dur ? start + dur : (segments[i + 1]?.startTime ?? start + 1)
                       if (t >= start && t < end) { idx = i; break }
                       acc = end
                     }
@@ -137,6 +137,15 @@ const PlayerPage: React.FC = () => {
       </main>
 
       <footer className="px-6 py-6 text-center text-xs text-stone-400">资源由 Supabase 提供 • 厚客户端直连</footer>
+
+      {/* DEBUG OVERLAY */}
+      <div className="fixed bottom-0 right-0 bg-black/80 text-green-400 p-2 text-[10px] m-2 rounded z-50 pointer-events-none">
+        <p>ID: {episode}</p>
+        <p>URL: {process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET (Start: ' + process.env.NEXT_PUBLIC_SUPABASE_URL.substring(0, 10) + '...)' : 'MISSING'}</p>
+        <p>KEY: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'MISSING'}</p>
+        <p>Loading: {String(loading)}</p>
+        <p>Job: {job ? 'FOUND' : 'NULL'}</p>
+      </div>
     </div>
   )
 }
