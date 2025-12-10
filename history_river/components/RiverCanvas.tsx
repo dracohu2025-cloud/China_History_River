@@ -37,10 +37,10 @@ function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T
 }
 
 // Performance optimization: RAF-based smooth updates
-function useSmoothViewport(initialViewport: Viewport) {
+function useSmoothViewport(initialViewport: Viewport | (() => Viewport)) {
   const [viewport, setViewport] = useState(initialViewport);
-  const rafRef = useRef<number>();
-  const targetViewportRef = useRef(initialViewport);
+  const rafRef = useRef<number | null>(null);
+  const targetViewportRef = useRef(viewport);
 
   const smoothSetViewport = useCallback((newViewport: Viewport | ((prev: Viewport) => Viewport)) => {
     const targetViewport = typeof newViewport === 'function'
@@ -192,7 +192,7 @@ const PodcastPinComponent: React.FC<PodcastPinComponentProps> = ({
 const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode, width, height, dynasties, events, pins }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const zoomRef = useRef<d3.ZoomBehavior<Element, unknown>>();
+  const zoomRef = useRef<d3.ZoomBehavior<Element, unknown> | null>(null);
   const isBrowser = typeof window !== 'undefined';
 
   // Optimized viewport state with RAF smoothing
@@ -576,7 +576,7 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode,
             return (
               <g transform={`translate(${screenX}, ${y})`} className="cursor-pointer" onClick={handleClick}>
                 <foreignObject x={-THUMB_SIZE / 2} y={-THUMB_SIZE / 2} width={THUMB_SIZE} height={THUMB_SIZE}>
-                  <div xmlns="http://www.w3.org/1999/xhtml" style={{ width: `${THUMB_SIZE}px`, height: `${THUMB_SIZE}px`, borderRadius: '8px', boxShadow: '0 8px 20px rgba(0,0,0,0.15)', overflow: 'hidden', border: '1px solid #e5e7eb', background: '#fff', position: 'relative' }}>
+                  <div style={{ width: `${THUMB_SIZE}px`, height: `${THUMB_SIZE}px`, borderRadius: '8px', boxShadow: '0 8px 20px rgba(0,0,0,0.15)', overflow: 'hidden', border: '1px solid #e5e7eb', background: '#fff', position: 'relative' }}>
                     {thumb ? (
                       <img src={thumb} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (

@@ -51,7 +51,7 @@ const PodcastPlayerModal: React.FC<PodcastPlayerModalProps> = ({ jobId, onClose 
   }, [jobId])
 
   const output = job?.output_data
-  
+
   // 计算每个片段的时间戳
   const segments: SegmentWithTimestamp[] = useMemo(() => {
     const script = output?.script || []
@@ -64,7 +64,7 @@ const PodcastPlayerModal: React.FC<PodcastPlayerModalProps> = ({ jobId, onClose 
       return segment
     })
   }, [output?.script])
-  
+
   // 监听音频时间更新，实现图片同步
   useEffect(() => {
     const audio = audioRef.current
@@ -72,14 +72,14 @@ const PodcastPlayerModal: React.FC<PodcastPlayerModalProps> = ({ jobId, onClose 
 
     const handleTimeUpdate = () => {
       const currentTime = audio.currentTime
-      
+
       // 找到当前播放的片段
       const activeIndex = segments.findIndex((seg, idx) => {
         const nextSeg = segments[idx + 1]
-        return currentTime >= seg.startTime && 
-               (!nextSeg || currentTime < nextSeg.startTime)
+        return currentTime >= seg.startTime &&
+          (!nextSeg || currentTime < nextSeg.startTime)
       })
-      
+
       if (activeIndex !== -1 && activeIndex !== currentSegmentIndex) {
         setCurrentSegmentIndex(activeIndex)
       }
@@ -101,7 +101,7 @@ const PodcastPlayerModal: React.FC<PodcastPlayerModalProps> = ({ jobId, onClose 
               {pinData?.doubanRating && (
                 <span className="bg-green-600 text-white text-xs font-bold px-2 py-1 rounded flex items-center gap-1">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
                   </svg>
                   {pinData.doubanRating}
                 </span>
@@ -133,9 +133,9 @@ const PodcastPlayerModal: React.FC<PodcastPlayerModalProps> = ({ jobId, onClose 
               <div className="md:col-span-2">
                 <div className="aspect-video bg-stone-100 rounded-lg border border-stone-200 flex items-center justify-center overflow-hidden">
                   {segments[currentSegmentIndex]?.generatedImageUrl ? (
-                    <img 
-                      src={segments[currentSegmentIndex].generatedImageUrl} 
-                      alt="cover" 
+                    <img
+                      src={segments[currentSegmentIndex].generatedImageUrl}
+                      alt="cover"
                       className="w-full h-full object-cover transition-opacity duration-300"
                     />
                   ) : (
@@ -152,15 +152,13 @@ const PodcastPlayerModal: React.FC<PodcastPlayerModalProps> = ({ jobId, onClose 
                   {segments.map((seg, idx) => {
                     const isActive = idx === currentSegmentIndex
                     return (
-                      <div 
-                        key={idx} 
-                        className={`flex items-start gap-3 p-2 rounded-lg transition-all duration-200 ${
-                          isActive ? 'bg-amber-50 border border-amber-200' : ''
-                        }`}
+                      <div
+                        key={idx}
+                        className={`flex items-start gap-3 p-2 rounded-lg transition-all duration-200 ${isActive ? 'bg-amber-50 border border-amber-200' : ''
+                          }`}
                       >
-                        <div className={`w-16 h-16 bg-stone-100 rounded border overflow-hidden flex-shrink-0 ${
-                          isActive ? 'border-amber-400' : 'border-stone-200'
-                        }`}>
+                        <div className={`w-16 h-16 bg-stone-100 rounded border overflow-hidden flex-shrink-0 ${isActive ? 'border-amber-400' : 'border-stone-200'
+                          }`}>
                           {seg.generatedImageUrl ? (
                             <img src={seg.generatedImageUrl} alt={`seg-${idx}`} className="w-full h-full object-cover" />
                           ) : (
@@ -175,7 +173,7 @@ const PodcastPlayerModal: React.FC<PodcastPlayerModalProps> = ({ jobId, onClose 
                         </div>
                       </div>
                     )
-                  })}%0A              </div>%0A              <div className=
+                  })}
                 </div>
               </div>
             </div>
