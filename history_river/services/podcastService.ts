@@ -148,17 +148,38 @@ export async function getPodcastById(jobId: string): Promise<PodcastJobRow | nul
   const arr: PodcastJobRow[] = await res.json()
   if (arr && arr.length) {
     const jobData = arr[0]
-    // 如果 jobs 表中没有 thumbnail_url，尝试从 podcasts 表获取
-    if (!jobData.thumbnail_url) {
-      const thumbUrl = `${BASE_URL}/rest/v1/podcasts?select=thumbnail_url` + `&id=eq.${encodeURIComponent(jobId)}`
-      const thumbRes = await fetch(thumbUrl, { headers })
-      if (thumbRes.ok) {
-        const thumbArr: { thumbnail_url?: string }[] = await thumbRes.json()
-        if (thumbArr && thumbArr.length && thumbArr[0].thumbnail_url) {
-          jobData.thumbnail_url = thumbArr[0].thumbnail_url
+
+    // Initialize output_data if missing
+    if (!jobData.output_data) {
+      jobData.output_data = { audioUrl: '', audioPath: '', script: [] }
+    }
+
+    // Check if we need to fetch missing data from podcasts table (thumbnail or audio)
+    if (!jobData.thumbnail_url || !jobData.output_data.audioUrl) {
+      const pUrl = `${BASE_URL}/rest/v1/podcasts?select=thumbnail_url,audio_path` + `&id=eq.${encodeURIComponent(jobId)}`
+      const pRes = await fetch(pUrl, { headers })
+
+      if (pRes.ok) {
+        const pArr: { thumbnail_url?: string; audio_path?: string }[] = await pRes.json()
+        if (pArr && pArr.length) {
+          const pRow = pArr[0]
+
+          // Patch Thumbnail
+          if (!jobData.thumbnail_url && pRow.thumbnail_url) {
+            jobData.thumbnail_url = pRow.thumbnail_url
+          }
+
+          // Patch Audio URL
+          if (!jobData.output_data.audioUrl && pRow.audio_path) {
+            const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'podcasts'
+            const path = pRow.audio_path.replace(/^\//, '')
+            jobData.output_data.audioUrl = `${BASE_URL}/storage/v1/object/public/${bucket}/${path}`
+            jobData.output_data.audioPath = path
+          }
         }
       }
     }
+
     return jobData
   }
   // REST fallback to podcasts
