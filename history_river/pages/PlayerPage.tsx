@@ -138,8 +138,8 @@ const PlayerPage: React.FC = () => {
 
       <footer className="px-6 py-6 text-center text-xs text-stone-400">资源由 Supabase 提供 • 厚客户端直连</footer>
 
-      {/* AUDIO DEBUG OVERLAY */}
-      <div className="fixed bottom-0 left-0 bg-black/80 text-yellow-400 p-2 text-[10px] m-2 rounded z-50 pointer-events-auto break-all max-w-[80vw]">
+      {/* AUDIO DEBUG OVERLAY - BLUE VERSION */}
+      <div className="fixed bottom-0 left-0 bg-blue-900/90 text-white p-2 text-[10px] m-2 rounded z-50 pointer-events-auto break-all max-w-[80vw]">
         <p>Audio URL: {output?.audioUrl || 'EMPTY'}</p>
         <p>Status: {job?.status || 'UNKNOWN'}</p>
       </div>
