@@ -101,7 +101,7 @@ export async function getPodcastById(jobId: string): Promise<PodcastJobRow | nul
       .maybeSingle()
     if (!error && data) {
       const jobData = data as PodcastJobRow
-      // 如果 jobs 表中没有 thumbnail_url，尝试从 podcasts 表获取
+      // Patch Thumbnail if missing
       if (!jobData.thumbnail_url) {
         const { data: pData } = await supabase
           .from('podcasts')
@@ -112,6 +112,34 @@ export async function getPodcastById(jobId: string): Promise<PodcastJobRow | nul
           jobData.thumbnail_url = pData.thumbnail_url
         }
       }
+
+      // Patch Audio if missing
+      // Initialize output_data if missing
+      if (!jobData.output_data) {
+        jobData.output_data = { audioUrl: '', audioPath: '', script: [] }
+      }
+
+      if (!jobData.output_data.audioUrl) {
+        // DEBUG: Log attempt
+        jobData.error_message = (jobData.error_message || '') + ` [M-Patching]`
+
+        const { data: pData } = await supabase
+          .from('podcasts')
+          .select('audio_path')
+          .eq('id', jobId)
+          .maybeSingle()
+
+        if (pData && pData.audio_path) {
+          const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'podcasts'
+          const path = pData.audio_path.replace(/^\//, '')
+          jobData.output_data.audioUrl = `${BASE_URL}/storage/v1/object/public/${bucket}/${path}`
+          jobData.output_data.audioPath = path
+          jobData.error_message += ` [M-Audio Patched]`
+        } else {
+          jobData.error_message += ` [M-Audio Not Found]`
+        }
+      }
+
       return jobData
     }
     // Fallback to podcasts table
