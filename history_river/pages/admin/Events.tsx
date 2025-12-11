@@ -26,6 +26,7 @@ const Events: React.FC = () => {
     const [dynasties, setDynasties] = useState<DynastyOption[]>([])
     const [loading, setLoading] = useState(false)
     const [editingId, setEditingId] = useState<number | null>(null)
+    const [totalCount, setTotalCount] = useState(0)
 
     // Pagination
     const [page, setPage] = useState(0)
@@ -44,13 +45,14 @@ const Events: React.FC = () => {
 
     const refresh = async () => {
         if (!supabase) return
-        const { data } = await supabase
+        const { data, count } = await supabase
             .from('historical_events')
-            .select('*')
+            .select('*', { count: 'exact' })
             .order('year', { ascending: true })
             .range(page * pageSize, (page + 1) * pageSize - 1)
 
         setRows(data || [])
+        setTotalCount(count || 0)
     }
 
     useEffect(() => { fetchDynasties() }, [])
@@ -153,8 +155,8 @@ const Events: React.FC = () => {
                     <h4 className="font-semibold text-gray-700">列表 (分页显示)</h4>
                     <div className="space-x-2">
                         <button disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))} className="text-blue-600 disabled:text-gray-400">上一页</button>
-                        <span>第 {page + 1} 页</span>
-                        <button onClick={() => setPage(p => p + 1)} className="text-blue-600">下一页</button>
+                        <span>第 {page + 1} / {Math.ceil(totalCount / pageSize)} 页</span>
+                        <button disabled={(page + 1) * pageSize >= totalCount} onClick={() => setPage(p => p + 1)} className="text-blue-600 disabled:text-gray-400">下一页</button>
                     </div>
                 </div>
                 <table className="w-full text-sm text-left">
@@ -175,8 +177,8 @@ const Events: React.FC = () => {
                                 <td className="p-3 font-medium">{row.title}</td>
                                 <td className="p-3">
                                     <span className={`px-2 py-0.5 rounded text-xs ${row.event_type === 'war' ? 'bg-red-100 text-red-800' :
-                                            row.event_type === 'culture' ? 'bg-purple-100 text-purple-800' :
-                                                'bg-gray-100 text-gray-800'
+                                        row.event_type === 'culture' ? 'bg-purple-100 text-purple-800' :
+                                            'bg-gray-100 text-gray-800'
                                         }`}>
                                         {row.event_type === 'politics' ? '政治' : row.event_type === 'war' ? '战争' : row.event_type === 'culture' ? '文化' : '科技'}
                                     </span>
@@ -191,6 +193,15 @@ const Events: React.FC = () => {
                         ))}
                     </tbody>
                 </table>
+                {/* Bottom Pagination */}
+                <div className="p-3 border-t flex justify-between items-center bg-gray-50">
+                    <span className="text-xs text-gray-500">共 {totalCount} 条记录</span>
+                    <div className="space-x-2 text-sm">
+                        <button disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))} className="text-blue-600 disabled:text-gray-400">上一页</button>
+                        <span>第 {page + 1} / {Math.ceil(totalCount / pageSize)} 页</span>
+                        <button disabled={(page + 1) * pageSize >= totalCount} onClick={() => setPage(p => p + 1)} className="text-blue-600 disabled:text-gray-400">下一页</button>
+                    </div>
+                </div>
             </div>
         </div>
     )
