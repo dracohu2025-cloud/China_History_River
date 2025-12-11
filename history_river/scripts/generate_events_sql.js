@@ -108,7 +108,7 @@ const events = [
     { year: 184, title: '黄巾起义', event_type: 'war', importance: 5, dynasty_id: 'han_east', description: '"苍天已死，黄天当立"，张角领导的宗教性农民起义，瓦解了东汉政权。' },
     { year: 189, title: '董卓乱京', event_type: 'politics', importance: 4, dynasty_id: 'han_east', description: '董卓进京废立皇帝，火烧洛阳，天下大乱。' },
     { year: 190, title: '十八路诸侯讨董', event_type: 'war', importance: 4, dynasty_id: 'han_east', description: '关东诸侯联合讨伐董卓，群雄割据局面形成。' },
-    { year: 192, title: '吕布戏貂蝉', event_type: 'culture', importance: 3, dynasty_id: 'han_east', description: '王允连环计，吕布杀董卓（演义故事深人心，史实为吕布杀董）。' },
+
     { year: 200, title: '官渡之战', event_type: 'war', importance: 5, dynasty_id: 'han_east', description: '曹操以少胜多大败袁绍，统一北方。' },
     { year: 208, title: '赤壁之战', event_type: 'war', importance: 5, dynasty_id: 'han_east', description: '孙刘联军大破曹操，奠定三分天下格局。' },
     { year: 211, title: '刘备入川', event_type: 'war', importance: 3, dynasty_id: 'han_east', description: '刘备应刘璋之邀入蜀，随即反客为主，夺取益州。' },
@@ -121,16 +121,21 @@ const events = [
     { year: 234, title: '五丈原陨落', event_type: 'politics', importance: 4, dynasty_id: 'threekingdoms_shu', description: '诸葛亮病逝五丈原，蜀汉北伐大业终结。' },
     { year: 249, title: '高平陵之变', event_type: 'politics', importance: 4, dynasty_id: 'threekingdoms_wei', description: '司马懿发动政变诛杀曹爽，司马氏掌握魏国实权。' },
     { year: 263, title: '魏灭蜀', event_type: 'war', importance: 4, dynasty_id: 'threekingdoms_wei', description: '邓艾偷渡阴平，刘禅投降，三国去一。' },
-    { year: 266, title: '晋代魏', event_type: 'politics', importance: 4, dynasty_id: 'jin', description: '司马炎建立西晋，魏国灭亡。' },
-    { year: 280, title: '西晋灭吴', event_type: 'war', importance: 5, dynasty_id: 'jin', description: '王濬楼船下益州，金陵王气黯然收，三分归晋，全国统一。' },
-    { year: 291, title: '八王之乱', event_type: 'war', importance: 4, dynasty_id: 'jin', description: '西晋皇族内部残酷夺权，国力耗尽，导致五胡乱华。' },
-    { year: 304, title: '五胡乱华开启', event_type: 'war', importance: 5, dynasty_id: 'jin', description: '李雄、刘渊分别建国，胡人政权纷纷建立，中原陷入长达百年的战乱。' },
-    { year: 311, title: '永嘉之乱', event_type: 'war', importance: 5, dynasty_id: 'jin', description: '匈奴攻陷洛阳，俘虏晋怀帝，中原文明遭受浩劫。' },
-    { year: 353, title: '兰亭集序', event_type: 'culture', importance: 4, dynasty_id: 'jin', description: '王羲之兰亭修禊，写下"天下第一行书"，魏晋风度的代表。' },
-    { year: 354, title: '桓温北伐', event_type: 'war', importance: 3, dynasty_id: 'jin', description: '桓温多次北伐，曾攻至长安霸上，由于内部牵制无功而返。' },
-    { year: 383, title: '淝水之战', event_type: 'war', importance: 5, dynasty_id: 'jin', description: '谢安、谢玄以少胜多击败前秦百万雄师，保住了东晋偏安局面，前秦崩溃。' },
-    { year: 403, title: '桓玄篡位', event_type: 'politics', importance: 3, dynasty_id: 'jin', description: '桓玄称帝，刘裕举兵讨伐，东晋名存实亡。' },
-    { year: 420, title: '刘裕代晋', event_type: 'politics', importance: 4, dynasty_id: 'liu_song', description: '刘裕建立刘宋，东晋灭亡，南朝开始，"气吞万里如虎"。' },
+    { year: 266, title: '晋代魏', event_type: 'politics', importance: 4, dynasty_id: 'western_jin', description: '司马炎建立西晋，魏国灭亡。' },
+    { year: 280, title: '西晋灭吴', event_type: 'war', importance: 5, dynasty_id: 'western_jin', description: '王濬楼船下益州，金陵王气黯然收，三分归晋。' },
+    { year: 290, title: '晋惠帝即位', event_type: 'politics', importance: 3, dynasty_id: 'western_jin', description: '司马衷即位，"何不食肉糜"，为八王之乱埋下祸根。' },
+    { year: 291, title: '八王之乱开始', event_type: 'war', importance: 5, dynasty_id: 'western_jin', description: '贾南风乱政，诸王互相攻杀，西晋国力耗尽，五胡乱华之始。' },
+    { year: 304, title: '五胡乱华开启', event_type: 'war', importance: 5, dynasty_id: 'western_jin', description: '李雄、刘渊分别建国，胡人政权纷纷建立，中原陷入长达百年的战乱。' },
+    { year: 311, title: '永嘉之乱', event_type: 'war', importance: 5, dynasty_id: 'western_jin', description: '匈奴攻陷洛阳，俘虏晋怀帝，中原衣冠南渡。' },
+    { year: 316, title: '西晋灭亡', event_type: 'politics', importance: 5, dynasty_id: 'western_jin', description: '匈奴攻陷长安，晋愍帝投降，西晋亡。' },
+    { year: 317, title: '东晋建立', event_type: 'politics', importance: 5, dynasty_id: 'eastern_jin', description: '司马睿在建康称帝，"王与马，共天下"。' },
+    { year: 353, title: '兰亭集序', event_type: 'culture', importance: 5, dynasty_id: 'eastern_jin', description: '王羲之书写《兰亭集序》，"天下第一行书"，魏晋风流顶峰。' },
+    { year: 354, title: '桓温北伐', event_type: 'war', importance: 3, dynasty_id: 'eastern_jin', description: '桓温多次北伐，曾攻至长安霸上，由于内部牵制无功而返。' },
+    { year: 383, title: '淝水之战', event_type: 'war', importance: 5, dynasty_id: 'eastern_jin', description: '谢安、谢玄以少胜多，大败前秦苻坚，奠定南北朝对峙局面。' },
+    { year: 399, title: '孙恩起义', event_type: 'war', importance: 3, dynasty_id: 'eastern_jin', description: '五斗米道首领孙恩起义，东晋统治根基动摇。' },
+    { year: 403, title: '桓玄篡位', event_type: 'politics', importance: 3, dynasty_id: 'eastern_jin', description: '桓玄称帝，刘裕举兵讨伐，东晋名存实亡。' },
+    { year: 405, title: '陶渊明归隐', event_type: 'culture', importance: 4, dynasty_id: 'eastern_jin', description: '陶渊明辞去彭泽县令，"采菊东篱下，悠然见南山"，田园诗派鼻祖。' },
+    { year: 420, title: '刘裕代晋', event_type: 'politics', importance: 5, dynasty_id: 'liu_song', description: '刘裕废晋恭帝，建立刘宋，东晋灭亡，南朝开始。' },
     { year: 446, title: '太武帝灭佛', event_type: 'culture', importance: 3, dynasty_id: 'northern_wei', description: '北魏太武帝推行道教，镇压佛教，"三武一宗"灭佛之一。' },
     { year: 494, title: '孝文帝迁都洛阳', event_type: 'politics', importance: 5, dynasty_id: 'northern_wei', description: '北魏孝文帝大力推行汉化改革，迁都洛阳，促进民族大融合。' },
     { year: 523, title: '六镇起义', event_type: 'war', importance: 4, dynasty_id: 'northern_wei', description: '北魏北方军镇反叛，北魏政权崩溃的开端。' },
@@ -315,6 +320,8 @@ const events = [
 
 console.log(`-- 4. Insert Missing Dynasties`);
 console.log(`INSERT INTO dynasties (id, name, chinese_name, start_year, end_year, color, description) VALUES`);
+console.log(`('western_jin', 'Western Jin', '西晋', 266, 316, '#9333ea', '短暂统一后，因八王之乱而亡。'),`);
+console.log(`('eastern_jin', 'Eastern Jin', '东晋', 317, 420, '#a855f7', '衣冠南渡，偏安江南，世族门阀政治。'),`);
 console.log(`('wu_zhou', 'Wu Zhou', '武周', 690, 705, '#f59e0b', '武则天建立的政权。'),`);
 console.log(`('liao', 'Liao', '辽', 916, 1125, '#0ea5e9', '契丹族建立的政权。'),`);
 console.log(`('western_xia', 'Western Xia', '西夏', 1038, 1227, '#16a34a', '党项族建立的政权。'),`);
