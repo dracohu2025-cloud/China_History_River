@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import RiverCanvas from './components/RiverCanvas';
+import OverviewCanvas from './components/OverviewCanvas';
 import DetailModal from './components/DetailModal';
 import PodcastPlayerModal from './components/PodcastPlayerModal';
 import { HistoricalEvent, Dynasty, RiverPin } from './types';
@@ -14,7 +15,8 @@ const COUNTRIES = [
   { code: 'germany', label: '🇩🇪 德国 (Germany)' },
   { code: 'russia', label: '🇷🇺 俄罗斯 (Russia)' },
   { code: 'india', label: '🇮🇳 印度 (India)' },
-  { code: 'japan', label: '🇯🇵 日本 (Japan)' },
+  { code: 'jp', label: '🇯🇵 日本' },
+  { code: 'overview', label: '🌎 全览' },
 ];
 
 const App: React.FC = () => {
@@ -32,25 +34,35 @@ const App: React.FC = () => {
   const [dynasties, setDynasties] = useState<Dynasty[]>(FALLBACK_DYNASTIES);
   const [events, setEvents] = useState<HistoricalEvent[]>(FALLBACK_EVENTS);
   const [pins, setPins] = useState<RiverPin[]>([]);
+  const [allDynasties, setAllDynasties] = useState<{ [code: string]: Dynasty[] }>({});
 
   useEffect(() => {
-    // Fetch data whenever selectedCountry changes
     const loadData = async () => {
-      const [d, e, p] = await Promise.all([
-        fetchDynasties(selectedCountry),
-        fetchEvents(selectedCountry),
-        fetchRiverPins(selectedCountry)
-      ]);
+      if (selectedCountry === 'overview') {
+        const targetCountries = COUNTRIES.filter(c => c.code !== 'overview');
+        const promises = targetCountries.map(c => fetchDynasties(c.code));
+        const results = await Promise.all(promises);
 
-      // For China, we might have fallbacks or Supabase data.
-      // For others, if array is empty, it means something went wrong with static load or empty data
-      if (d.length > 0) setDynasties(d);
-      else if (selectedCountry === 'china') setDynasties(FALLBACK_DYNASTIES);
+        const newAllDynasties: { [code: string]: Dynasty[] } = {};
+        targetCountries.forEach((c, idx) => {
+          newAllDynasties[c.code] = results[idx];
+        });
+        setAllDynasties(newAllDynasties);
+      } else {
+        const [d, e, p] = await Promise.all([
+          fetchDynasties(selectedCountry),
+          fetchEvents(selectedCountry),
+          fetchRiverPins(selectedCountry)
+        ]);
+        // For China, we might have fallbacks. For others, allow empty.
+        if (d.length > 0) setDynasties(d);
+        else if (selectedCountry === 'china') setDynasties(FALLBACK_DYNASTIES);
 
-      if (e.length > 0) setEvents(e);
-      else if (selectedCountry === 'china') setEvents(FALLBACK_EVENTS);
+        if (e.length > 0) setEvents(e);
+        else if (selectedCountry === 'china') setEvents(FALLBACK_EVENTS);
 
-      if (p.length > 0) setPins(p);
+        if (p.length > 0) setPins(p);
+      }
     };
     loadData();
   }, [selectedCountry]);
@@ -90,6 +102,12 @@ const App: React.FC = () => {
     // event 为 null 时什么都不做，不查询不显示
   };
 
+  const handleOpenEpisode = (jobId: string) => {
+    if (isBrowser && jobId) {
+      window.location.href = `/player.html?episode=${jobId}&v=3`
+    }
+  }
+
   return (
     <div className="relative w-screen h-screen bg-stone-50 text-stone-900 overflow-hidden">
 
@@ -120,21 +138,28 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      <RiverCanvas
-        // Add key to force re-render on country change if needed, though props update should handle it
-        key={selectedCountry}
-        width={dimensions.width}
-        height={dimensions.height}
-        dynasties={dynasties}
-        events={events}
-        pins={pins}
-        onEventSelect={handleEventSelect}
-        onOpenEpisode={(jobId) => {
-          if (isBrowser && jobId) {
-            window.location.href = `/player.html?episode=${jobId}&v=3`
-          }
-        }}
-      />
+      {/* Main Content */}
+      <div className="flex-1 overflow-hidden relative h-full w-full">
+        {selectedCountry === 'overview' ? (
+          <OverviewCanvas
+            width={dimensions.width}
+            height={dimensions.height}
+            allDynasties={allDynasties}
+            countryLabels={COUNTRIES.reduce((acc, c) => ({ ...acc, [c.code]: c.label }), {})}
+          />
+        ) : (
+          <RiverCanvas
+            key={selectedCountry}
+            onEventSelect={handleEventSelect}
+            onOpenEpisode={handleOpenEpisode}
+            width={dimensions.width}
+            height={dimensions.height}
+            dynasties={dynasties}
+            events={events}
+            pins={pins}
+          />
+        )}
+      </div>
 
 
       {/* Detail Modal */}
