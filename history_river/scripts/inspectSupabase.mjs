@@ -21,7 +21,10 @@ async function run() {
     process.exit(1)
   }
   const conn = url.includes('?') ? `${url}&sslmode=require` : `${url}?sslmode=require`
-  const client = new Client({ connectionString: conn })
+  const client = new Client({
+    connectionString: conn,
+    ssl: { rejectUnauthorized: false }
+  })
   await client.connect()
   const basic = await client.query('select current_database() as db, current_user as usr')
   const schemas = await client.query("select nspname as schema, pg_get_userbyid(nspowner) as owner from pg_namespace where nspname not like 'pg_%' and nspname <> 'information_schema' order by 1")

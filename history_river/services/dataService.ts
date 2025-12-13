@@ -1,23 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
 import { Dynasty, HistoricalEvent, RiverPin } from '../types'
-import { WORLD_HISTORY } from '../data/worldHistory'
-
 const BASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '')
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 const supabase = (BASE_URL && ANON_KEY) ? createClient(BASE_URL, ANON_KEY) : null
 
 export async function fetchDynasties(country: string = 'china'): Promise<Dynasty[]> {
-    if (country !== 'china') {
-        const data = WORLD_HISTORY[country];
-        return data ? data.dynasties : [];
-    }
-
-    // Default to China (Supabase)
     if (!supabase) return []
 
     const { data, error } = await supabase
         .from('dynasties')
         .select('*')
+        .eq('country', country)
         .order('start_year', { ascending: true })
 
     if (error) {
@@ -37,17 +30,12 @@ export async function fetchDynasties(country: string = 'china'): Promise<Dynasty
 }
 
 export async function fetchEvents(country: string = 'china'): Promise<HistoricalEvent[]> {
-    if (country !== 'china') {
-        const data = WORLD_HISTORY[country];
-        return data ? data.events : [];
-    }
-
-    // Default to China (Supabase)
     if (!supabase) return []
 
     const { data, error } = await supabase
         .from('historical_events')
         .select('*')
+        .eq('country', country)
         .order('year', { ascending: true })
 
     if (error) {
@@ -64,7 +52,9 @@ export async function fetchEvents(country: string = 'china'): Promise<Historical
     }));
 }
 
-export async function fetchRiverPins(): Promise<RiverPin[]> {
+export async function fetchRiverPins(country: string = 'china'): Promise<RiverPin[]> {
+    if (country !== 'china') return [];
+
     const { data, error } = await supabase.from('river_pins').select('*').order('year', { ascending: true });
     if (error) {
         console.error('Error fetching river pins:', error);

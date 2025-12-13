@@ -36,11 +36,14 @@ const App: React.FC = () => {
   useEffect(() => {
     // Fetch data whenever selectedCountry changes
     const loadData = async () => {
+      console.log(`[App] Fetching data for country: ${selectedCountry}`);
       const [d, e, p] = await Promise.all([
         fetchDynasties(selectedCountry),
         fetchEvents(selectedCountry),
-        fetchRiverPins() // Pins might need filtering too, but keeping global for now
+        fetchRiverPins(selectedCountry)
       ]);
+      console.log(`[App] Fetched ${d.length} dynasties, ${e.length} events, ${p.length} pins.`);
+      console.log(`[App] Sample event:`, e[0]);
 
       // For China, we might have fallbacks or Supabase data.
       // For others, if array is empty, it means something went wrong with static load or empty data
