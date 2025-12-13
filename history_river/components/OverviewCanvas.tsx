@@ -267,12 +267,15 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                     {/* Dynasty Labels Layer - Separate to avoid distortion */}
                     <g pointerEvents="none">
                         {COUNTRIES.map((country) => {
-                            const { yScale } = riversData[country];
+                            const { series, yScale } = riversData[country];
                             const countryDynasties = allDynasties[country];
 
                             return (
                                 <g key={`text-${country}`}>
-                                    {countryDynasties.map(dynasty => {
+                                    {series.map(layer => {
+                                        const dynasty = countryDynasties.find(d => d.id === layer.key);
+                                        if (!dynasty) return null;
+
                                         // Calculate visible bounds
                                         const startX = visibleXScale(dynasty.startYear);
                                         const endX = visibleXScale(dynasty.endYear);
@@ -280,16 +283,26 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
 
                                         // Optimization: visible only
                                         if (endX < 0 || startX > width) return null;
-                                        if (widthPx < 40) return null; // Hide if too small
+                                        if (widthPx < 20) return null; // Hide if too small (increased threshold slightly for cleaner look)
 
                                         const midYear = (dynasty.startYear + dynasty.endYear) / 2;
                                         const midX = visibleXScale(midYear);
 
-                                        // Use yScale from data preparation to find centered Y
-                                        // But we don't have easy access to the exact stacked Y here without looking up data again.
-                                        // Ideally we stick to the row center approximation for labels, or use the yScale(0).
-                                        // riversData[country].yScale domain is [-150, 150]. 0 is center.
-                                        const centerY = yScale(0);
+                                        // Precise Y calculation based on stack data
+                                        const dataIndex = Math.floor((midYear - DATA_START_YEAR) / DATA_STEP);
+                                        const point = layer[dataIndex];
+
+                                        // If point exists, use the average of y0 and y1. 
+                                        // Fallback to row center only if data is missing (unlikely within range).
+                                        let centerY = yScale(0);
+                                        if (point) {
+                                            const y0 = point[0];
+                                            const y1 = point[1];
+                                            // Handle cases where y0/y1 might be NaN (though D3 stack usually handles this)
+                                            if (!isNaN(y0) && !isNaN(y1)) {
+                                                centerY = yScale((y0 + y1) / 2);
+                                            }
+                                        }
 
                                         return (
                                             <text
@@ -297,18 +310,18 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                                 x={midX}
                                                 y={centerY}
                                                 fill="rgba(255,255,255,0.95)"
-                                                fontSize={Math.min(16, Math.max(12, widthPx / (dynasty.chineseName.length + 1)))}
+                                                fontSize={Math.min(16, Math.max(10, widthPx / (dynasty.chineseName.length + 0.5)))}
                                                 fontWeight="bold"
                                                 textAnchor="middle"
                                                 dominantBaseline="middle"
                                                 style={{
                                                     textShadow: '0 1px 2px rgba(0,0,0,0.6)',
-                                                    pointerEvents: 'none'
+                                                    pointerEvents: 'none' // Ensure clicks pass through
                                                 }}
                                             >
                                                 {dynasty.chineseName}
                                             </text>
-                                        )
+                                        );
                                     })}
                                 </g>
                             )
