@@ -528,7 +528,7 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
                     opacity: viewport.k > 0.2 ? 1 : 0.3 // 降低文字显示阈值，并添加半透明状态
                   }}
                 >
-                  {t(`dynasties.${dynasty.id}`, { defaultValue: dynasty.name })}
+                  {i18n.language.startsWith('zh') ? (dynasty.chineseName || t(`dynasties.${dynasty.id}`, { defaultValue: dynasty.name })) : (dynasty.name || t(`dynasties.${dynasty.id}`))}
                 </text>
               </g>
             );
@@ -567,7 +567,7 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
 
                     {/* 标题 - 字体缩小一半 */}
                     <text y={6} fill="#1f2937" fontSize={7} fontWeight={600} textAnchor="middle">
-                      {i18n.language.startsWith('zh') ? '新中国成立' : 'PRC Founded'}
+                      {i18n.language.startsWith('en') ? 'PRC Founded' : '新中国成立'}
                     </text>
                   </g>
                 </g>

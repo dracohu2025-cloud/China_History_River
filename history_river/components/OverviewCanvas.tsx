@@ -219,7 +219,9 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
 
     // Helper for dynasty name
     const getDynastyName = (d: Dynasty) => {
-        return t(`dynasties.${d.id}`, { defaultValue: d.name });
+        return i18n.language.startsWith('zh')
+            ? (d.chineseName || t(`dynasties.${d.id}`, { defaultValue: d.name }))
+            : (d.name || t(`dynasties.${d.id}`));
     };
 
     return (

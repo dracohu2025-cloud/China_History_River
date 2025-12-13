@@ -46,6 +46,8 @@ export async function fetchEvents(country: string = 'china'): Promise<Historical
     return (data || []).map((row: any) => ({
         year: row.year,
         title: row.title,
+        titleEn: row.title_en, // Map localized titles
+        titleZh: row.title_zh,
         type: row.event_type, // Map event_type (DB) to type (Frontend)
         importance: row.importance,
         description: row.description,
