@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './src/i18n';
+import './src/index.css';
 import ErrorBoundary from './components/ErrorBoundary';
 
 const rootElement = document.getElementById('root');

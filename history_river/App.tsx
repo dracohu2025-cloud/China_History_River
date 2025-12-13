@@ -31,6 +31,7 @@ const App: React.FC = () => {
 
   // New State: Selected Country
   const [selectedCountry, setSelectedCountry] = useState<string>('overview');
+  const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
 
   const [dynasties, setDynasties] = useState<Dynasty[]>(FALLBACK_DYNASTIES);
   const [events, setEvents] = useState<HistoricalEvent[]>(FALLBACK_EVENTS);
@@ -154,6 +155,7 @@ const App: React.FC = () => {
             </div>
           </div>
 
+          {/* 3D View Switch - Temporarily Disabled
           <button
             onClick={() => setViewMode(viewMode === '2d' ? '3d' : '2d')}
             className="bg-stone-800 text-stone-50 px-4 py-2 rounded-xl font-medium shadow-lg shadow-stone-900/10 hover:bg-stone-900 hover:scale-105 active:scale-95 transition-all text-sm flex items-center gap-2"
@@ -170,6 +172,7 @@ const App: React.FC = () => {
               </>
             )}
           </button>
+           */}
 
           <a
             href="https://www.buymeacoffee.com/dracohu"
