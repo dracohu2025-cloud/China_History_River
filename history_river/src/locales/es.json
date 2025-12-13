@@ -1,0 +1,40 @@
+{
+    "app": {
+        "title": "Río de la Historia",
+        "subtitle": "5000 años de civilización, fluyendo como un río.",
+        "select_country": "Seleccionar país",
+        "overview": "Visión global",
+        "buy_coffee": "Cómprame un café",
+        "loading": "Cargando...",
+        "no_data": "Sin datos",
+        "switch_3d": "Vista 3D",
+        "switch_2d": "Vista 2D"
+    },
+    "date_format": {
+        "bc": "{{year}} a. C.",
+        "ad": "{{year}}"
+    },
+    "modal": {
+        "details": "Detalles del evento",
+        "wiki": "Wikipedia",
+        "close": "Cerrar"
+    },
+    "countries": {
+        "china": "China",
+        "japan": "Japón",
+        "france": "Francia",
+        "germany": "Alemania",
+        "spain": "España",
+        "uk": "Reino Unido",
+        "usa": "EE. UU.",
+        "russia": "Rusia",
+        "italy": "Italia",
+        "korea": "Corea",
+        "india": "India",
+        "egypt": "Egipto",
+        "greece": "Grecia",
+        "turkey": "Turquía",
+        "iran": "Irán",
+        "overview": "Visión general"
+    }
+}

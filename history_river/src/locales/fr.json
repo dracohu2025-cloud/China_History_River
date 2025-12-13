@@ -1,0 +1,36 @@
+{
+    "app": {
+        "title": "Fleuve de l'Histoire",
+        "subtitle": "5000 ans de civilisation, s'écoulant comme une rivière.",
+        "select_country": "Sélectionner un pays",
+        "overview": "Aperçu global",
+        "buy_coffee": "M'offrir un café",
+        "loading": "Chargement...",
+        "no_data": "Pas de données",
+        "switch_3d": "Vue 3D",
+        "switch_2d": "Vue 2D"
+    },
+    "modal": {
+        "details": "Détails de l'événement",
+        "wiki": "Wikipédia",
+        "close": "Fermer"
+    },
+    "countries": {
+        "china": "Chine",
+        "japan": "Japon",
+        "france": "France",
+        "germany": "Allemagne",
+        "spain": "Espagne",
+        "uk": "Royaume-Uni",
+        "usa": "États-Unis",
+        "russia": "Russie",
+        "italy": "Italie",
+        "korea": "Corée",
+        "india": "Inde",
+        "egypt": "Égypte",
+        "greece": "Grèce",
+        "turkey": "Turquie",
+        "iran": "Iran",
+        "overview": "Aperçu"
+    }
+}

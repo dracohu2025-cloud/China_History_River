@@ -1,7 +1,8 @@
 export const fetchEventDetails = async (
   year: number,
   context: string,
-  eventTitle?: string
+  eventTitle?: string,
+  language: string = 'en'
 ): Promise<string> => {
   try {
     // FIX: 修正 API 路径，使用 /timeline-api 前缀以确保被正确代理到 Django (端口8000)
@@ -21,7 +22,8 @@ export const fetchEventDetails = async (
       body: JSON.stringify({
         year,
         context,
-        event_title: eventTitle || ''
+        event_title: eventTitle || '',
+        language
       })
     })
 

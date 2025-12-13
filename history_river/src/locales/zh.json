@@ -1,0 +1,36 @@
+{
+    "app": {
+        "title": "历史长河",
+        "subtitle": "中华文明五千年，岁月如歌，逝者如斯夫。",
+        "select_country": "选择国家/地区",
+        "overview": "全球概览",
+        "buy_coffee": "请我喝咖啡",
+        "loading": "数据加载中...",
+        "no_data": "暂无历史数据",
+        "switch_3d": "切换3D",
+        "switch_2d": "切换2D"
+    },
+    "modal": {
+        "details": "历史事件详情",
+        "wiki": "维基百科",
+        "close": "关闭"
+    },
+    "countries": {
+        "china": "中国",
+        "japan": "日本",
+        "france": "法国",
+        "germany": "德国",
+        "spain": "西班牙",
+        "uk": "英国",
+        "usa": "美国",
+        "russia": "俄罗斯",
+        "italy": "意大利",
+        "korea": "韩国",
+        "india": "印度",
+        "egypt": "埃及",
+        "greece": "希腊",
+        "turkey": "土耳其",
+        "iran": "伊朗",
+        "overview": "概览"
+    }
+}

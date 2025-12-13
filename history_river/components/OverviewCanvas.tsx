@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import * as d3 from 'd3';
+import { useTranslation } from 'react-i18next';
 import { getDynastyPower } from '../data/historyData';
 import { Dynasty, Viewport } from '../types';
 
@@ -61,6 +62,7 @@ const DATA_END_YEAR = 2025;
 const DATA_STEP = 5; // Use coarser step for overview to improve performance
 
 const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynasties, countryLabels }) => {
+    const { t, i18n } = useTranslation();
     const svgRef = useRef<SVGSVGElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const zoomRef = useRef<d3.ZoomBehavior<Element, unknown> | null>(null);
@@ -215,6 +217,11 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
         };
     }, [throttledMouseMove]);
 
+    // Helper for dynasty name
+    const getDynastyName = (d: Dynasty) => {
+        return i18n.language.startsWith('zh') ? d.chineseName : d.name;
+    };
+
     return (
         <div
             ref={containerRef}
@@ -304,13 +311,14 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                             }
                                         }
 
+                                        const name = getDynastyName(dynasty);
                                         return (
                                             <text
                                                 key={dynasty.id}
                                                 x={midX}
                                                 y={centerY}
                                                 fill="rgba(255,255,255,0.95)"
-                                                fontSize={Math.min(16, Math.max(10, widthPx / (dynasty.chineseName.length + 0.5)))}
+                                                fontSize={Math.min(16, Math.max(10, widthPx / (name.length + 0.5)))}
                                                 fontWeight="bold"
                                                 textAnchor="middle"
                                                 dominantBaseline="middle"
@@ -319,7 +327,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                                     pointerEvents: 'none' // Ensure clicks pass through
                                                 }}
                                             >
-                                                {dynasty.chineseName}
+                                                {name}
                                             </text>
                                         );
                                     })}
@@ -412,7 +420,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                             <g key={year} transform={`translate(${currentVisibleXScale(year)}, 0)`}>
                                 <line y2={10} stroke="#a8a29e" strokeWidth={1} />
                                 <text y={22} fill="#57534e" fontSize={10} textAnchor="middle">
-                                    {year < 0 ? `${Math.abs(year)} BC` : year}
+                                    {year < 0 ? t('date_format.bc', { year: Math.abs(year) }) : t('date_format.ad', { year })}
                                 </text>
                             </g>
                         ));

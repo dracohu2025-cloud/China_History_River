@@ -1,0 +1,40 @@
+{
+    "app": {
+        "title": "History River",
+        "subtitle": "5000 Years of Civilization, Flowing like a River.",
+        "select_country": "Select Country / Region",
+        "overview": "Global Overview",
+        "buy_coffee": "Buy me a coffee",
+        "loading": "Loading data...",
+        "no_data": "No historical data available",
+        "switch_3d": "Switch to 3D",
+        "switch_2d": "Switch to 2D"
+    },
+    "date_format": {
+        "bc": "BC {{year}}",
+        "ad": "{{year}}"
+    },
+    "modal": {
+        "details": "Event Details",
+        "wiki": "Wikipedia",
+        "close": "Close"
+    },
+    "countries": {
+        "china": "China",
+        "japan": "Japan",
+        "france": "France",
+        "germany": "Germany",
+        "spain": "Spain",
+        "uk": "United Kingdom",
+        "usa": "USA",
+        "russia": "Russia",
+        "italy": "Italy",
+        "korea": "Korea",
+        "india": "India",
+        "egypt": "Egypt",
+        "greece": "Greece",
+        "turkey": "Turkey",
+        "iran": "Iran",
+        "overview": "Overview"
+    }
+}

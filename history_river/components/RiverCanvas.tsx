@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import * as d3 from 'd3';
+import { useTranslation } from 'react-i18next';
 import { getDynastyPower } from '../data/historyData';
 import { HistoricalEvent, Viewport, EventDetail, Dynasty, RiverPin } from '../types';
 import { getPodcastById, PodcastJobRow } from '@/services/podcastService';
@@ -8,12 +9,11 @@ import { getPodcastById, PodcastJobRow } from '@/services/podcastService';
 
 interface RiverCanvasProps {
   onEventSelect: (event: HistoricalEvent | null, year: number) => void;
-  onOpenEpisode?: (jobId: string) => void;
   width: number;
   height: number;
   dynasties: Dynasty[];
   events: HistoricalEvent[];
-  pins: RiverPin[];
+  pins?: RiverPin[]; // Keeping optional for now to avoid breakages during refactor, but unused
 }
 
 interface LayoutNode {
@@ -189,7 +189,8 @@ const PodcastPinComponent: React.FC<PodcastPinComponentProps> = ({
   );
 };
 
-const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode, width, height, dynasties, events, pins }) => {
+const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height, dynasties, events }) => {
+  const { t, i18n } = useTranslation();
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef<d3.ZoomBehavior<Element, unknown> | null>(null);
@@ -415,17 +416,13 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode,
         // Optimized event lookup with binary search for better performance
         const node = eventLayoutNodes.find(n => Math.abs(n.event.year - year) <= 1);
         setHoverEvent(node ? node.event : null);
-
-        const ep = pins.find(p => Math.abs(p.year - year) <= 1);
-        setHoverEpisodeId(ep ? ep.jobId : null);
       } else {
         setCursorX(null);
         setHoverYear(null);
         setHoverEvent(null);
-        setHoverEpisodeId(null);
       }
     }, 16), // ~60fps
-    [width, visibleXScale, eventLayoutNodes, pins]
+    [width, visibleXScale, eventLayoutNodes]
   );
 
   useEffect(() => {
@@ -444,7 +441,6 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode,
     setCursorX(null);
     setHoverYear(null);
     setHoverEvent(null);
-    setHoverEpisodeId(null);
   }, []);
 
   // Handle event clicks
@@ -452,12 +448,6 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode,
     e.stopPropagation();
     onEventSelect(event, event.year);
   }, [onEventSelect]);
-
-  // Handle podcast clicks
-  const handlePodcastClick = useCallback((e: React.MouseEvent, jobId: string) => {
-    e.stopPropagation();
-    if (onOpenEpisode) onOpenEpisode(jobId);
-  }, [onOpenEpisode]);
 
   // Set up wheel event listener
   useEffect(() => {
@@ -470,20 +460,6 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode,
       };
     }
   }, [handleWheel, isBrowser]);
-
-  // 播客悬停缓存机制
-  useEffect(() => {
-    let active = true;
-    const epId = hoverEpisodeId;
-    if (!epId) return;
-    if (podcastCache[epId] !== undefined) return;
-    (async () => {
-      const data = await getPodcastById(epId);
-      if (!active) return;
-      setPodcastCache(prev => ({ ...prev, [epId]: data }));
-    })();
-    return () => { active = false; };
-  }, [hoverEpisodeId, podcastCache]);
 
   const getEventColor = (type: string) => {
     switch (type) {
@@ -557,39 +533,6 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode,
               </g>
             );
           })}
-
-          {hoverEpisodeId && (() => {
-            const pin = pins.find(p => p.jobId === hoverEpisodeId);
-            if (!pin) return null;
-            const screenX = visibleXScale(pin.year);
-            const TRACK_HEIGHT = 56;
-            const TRACK_MARGIN = 12;
-            const THUMB_SIZE = 64;
-            const y = height - TRACK_HEIGHT - TRACK_MARGIN + (TRACK_HEIGHT - THUMB_SIZE) / 2;
-            const job = podcastCache[hoverEpisodeId];
-            // 优先使用数据库中存储的 thumbnail_url，如果没有则使用脚本第一张图片
-            const thumb = job?.thumbnail_url || job?.output_data?.script?.[0]?.generatedImageUrl;
-            const handleClick = (e: React.MouseEvent) => {
-              e.stopPropagation();
-              if (onOpenEpisode) onOpenEpisode(hoverEpisodeId);
-            };
-            return (
-              <g transform={`translate(${screenX}, ${y})`} className="cursor-pointer" onClick={handleClick}>
-                <foreignObject x={-THUMB_SIZE / 2} y={-THUMB_SIZE / 2} width={THUMB_SIZE} height={THUMB_SIZE}>
-                  <div style={{ width: `${THUMB_SIZE}px`, height: `${THUMB_SIZE}px`, borderRadius: '8px', boxShadow: '0 8px 20px rgba(0,0,0,0.15)', overflow: 'hidden', border: '1px solid #e5e7eb', background: '#fff', position: 'relative' }}>
-                    {thumb ? (
-                      <img src={thumb} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: 10 }}>无缩略图</div>
-                    )}
-                    <div style={{ position: 'absolute', right: 6, bottom: 6, width: 20, height: 20, borderRadius: 5, background: 'rgba(217,119,6,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z" /></svg>
-                    </div>
-                  </div>
-                </foreignObject>
-              </g>
-            );
-          })()}
         </g>
 
         {/* UI & MARKERS LAYER */}
@@ -715,60 +658,15 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode,
                     textAnchor="middle"
                     className="select-none whitespace-nowrap font-sans"
                   >
-                    <tspan fill={color} fontWeight="800">{node.event.year < 0 ? `BC${Math.abs(node.event.year)}` : node.event.year}</tspan>
-                    <tspan dx="6">{node.event.title}</tspan>
+                    <tspan fill={color} fontWeight="800">
+                      {node.event.year < 0 ? t('date_format.bc', { year: Math.abs(node.event.year) }) : t('date_format.ad', { year: node.event.year })}
+                    </tspan>
+                    <tspan dx="6">
+                      {i18n.language.startsWith('zh') ? node.event.title : (node.event.titleEn || node.event.title)}
+                    </tspan>
                   </text>
                 </g>
               </g>
-            );
-          })}
-
-          {/* Podcast Track at bottom */}
-          <rect x={0} y={height - 56 - 12} width={width} height={56} fill="#f5f5f4" stroke="#e7e5e4" />
-          {/* 播客轨道标签 - 历史播客 */}
-          <g transform={`translate(20, ${height - 56 - 12 + 29})`}>
-            {/* 文字阴影，增加立体感 */}
-            <text
-              fill="#ffffff"
-              fontSize={16}
-              fontWeight={700}
-              textAnchor="start"
-              style={{
-                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif",
-                letterSpacing: "0.5px"
-              }}
-            >
-              历史播客
-            </text>
-            {/* 装饰下划线 */}
-            <line
-              x1={0}
-              y1={8}
-              x2={68}
-              y2={8}
-            />
-          </g>
-          {/* Pinned Podcast Info (always visible when within viewport) */}
-          {pins.map((pin) => {
-            const screenX = visibleXScale(pin.year);
-            // 这里的检查是为了性能优化，屏幕外的Pin不渲染
-            if (screenX < -200 || screenX > width + 200) return null;
-
-            const TRACK_HEIGHT = 56;
-            const TRACK_MARGIN = 12;
-            const title = pin.title || '';
-
-            return (
-              <PodcastPinComponent
-                key={`pin-${pin.jobId}-${viewport.x}-${viewport.k}`}
-                pin={pin}
-                screenX={screenX}
-                height={height}
-                trackHeight={TRACK_HEIGHT}
-                trackMargin={TRACK_MARGIN}
-                title={title}
-                onOpenEpisode={onOpenEpisode}
-              />
             );
           })}
         </g>
@@ -796,7 +694,7 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, onOpenEpisode,
                 ))}
                 {majorTicks.map((year, i) => {
                   const x = currentVisibleXScale(year);
-                  const label = year < 0 ? `BC${Math.abs(year)}` : `${year}`;
+                  const label = year < 0 ? t('date_format.bc', { year: Math.abs(year) }) : t('date_format.ad', { year });
                   const w = label.length * 9 + 18;
                   return (
                     <g key={`J-${i}-${year}`} transform={`translate(${x}, 0)`}>

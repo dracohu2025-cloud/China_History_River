@@ -12,6 +12,7 @@ export interface Dynasty {
 export interface HistoricalEvent {
   year: number;
   title: string;
+  titleEn?: string;
   type: 'war' | 'culture' | 'politics' | 'science';
   description?: string;
   importance: 1 | 2 | 3 | 4 | 5; // 1 = Critical, 5 = Minor

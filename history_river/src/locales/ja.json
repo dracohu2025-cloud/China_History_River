@@ -1,0 +1,40 @@
+{
+    "app": {
+        "title": "歴史の長河",
+        "subtitle": "五千年の文明、川のように流れる。",
+        "select_country": "国/地域を選択",
+        "overview": "世界概要",
+        "buy_coffee": "コーヒーを奢る",
+        "loading": "読み込み中...",
+        "no_data": "履歴データなし",
+        "switch_3d": "3Dに切り替え",
+        "switch_2d": "2Dに切り替え"
+    },
+    "date_format": {
+        "bc": "紀元前{{year}}年",
+        "ad": "{{year}}年"
+    },
+    "modal": {
+        "details": "イベント詳細",
+        "wiki": "ウィキペディア",
+        "close": "閉じる"
+    },
+    "countries": {
+        "china": "中国",
+        "japan": "日本",
+        "france": "フランス",
+        "germany": "ドイツ",
+        "spain": "スペイン",
+        "uk": "イギリス",
+        "usa": "アメリカ",
+        "russia": "ロシア",
+        "italy": "イタリア",
+        "korea": "韓国",
+        "india": "インド",
+        "egypt": "エジプト",
+        "greece": "ギリシャ",
+        "turkey": "トルコ",
+        "iran": "イラン",
+        "overview": "概要"
+    }
+}
