@@ -6,6 +6,17 @@ import { HistoricalEvent, Dynasty, RiverPin } from './types';
 import { fetchDynasties, fetchEvents, fetchRiverPins } from './services/dataService';
 import { DYNASTIES as FALLBACK_DYNASTIES, KEY_EVENTS as FALLBACK_EVENTS } from './data/historyData';
 
+const COUNTRIES = [
+  { code: 'china', label: '🇨🇳 中国 (China)' },
+  { code: 'usa', label: '🇺🇸 美国 (USA)' },
+  { code: 'uk', label: '🇬🇧 英国 (UK)' },
+  { code: 'france', label: '🇫🇷 法国 (France)' },
+  { code: 'germany', label: '🇩🇪 德国 (Germany)' },
+  { code: 'russia', label: '🇷🇺 俄罗斯 (Russia)' },
+  { code: 'india', label: '🇮🇳 印度 (India)' },
+  { code: 'japan', label: '🇯🇵 日本 (Japan)' },
+];
+
 const App: React.FC = () => {
   const isBrowser = typeof window !== 'undefined'
   const [dimensions, setDimensions] = useState({ width: isBrowser ? window.innerWidth : 1024, height: isBrowser ? window.innerHeight : 768 });
@@ -15,20 +26,34 @@ const App: React.FC = () => {
   const [playerOpen, setPlayerOpen] = useState(false);
   const [currentEpisodeId, setCurrentEpisodeId] = useState<string | null>(null);
 
+  // New State: Selected Country
+  const [selectedCountry, setSelectedCountry] = useState<string>('china');
+
   const [dynasties, setDynasties] = useState<Dynasty[]>(FALLBACK_DYNASTIES);
   const [events, setEvents] = useState<HistoricalEvent[]>(FALLBACK_EVENTS);
   const [pins, setPins] = useState<RiverPin[]>([]);
 
   useEffect(() => {
-    // Fetch data from Supabase
+    // Fetch data whenever selectedCountry changes
     const loadData = async () => {
-      const [d, e, p] = await Promise.all([fetchDynasties(), fetchEvents(), fetchRiverPins()]);
+      const [d, e, p] = await Promise.all([
+        fetchDynasties(selectedCountry),
+        fetchEvents(selectedCountry),
+        fetchRiverPins() // Pins might need filtering too, but keeping global for now
+      ]);
+
+      // For China, we might have fallbacks or Supabase data.
+      // For others, if array is empty, it means something went wrong with static load or empty data
       if (d.length > 0) setDynasties(d);
+      else if (selectedCountry === 'china') setDynasties(FALLBACK_DYNASTIES);
+
       if (e.length > 0) setEvents(e);
+      else if (selectedCountry === 'china') setEvents(FALLBACK_EVENTS);
+
       if (p.length > 0) setPins(p);
     };
     loadData();
-  }, []);
+  }, [selectedCountry]);
 
   useEffect(() => {
     if (!isBrowser) return
@@ -69,18 +94,35 @@ const App: React.FC = () => {
     <div className="relative w-screen h-screen bg-stone-50 text-stone-900 overflow-hidden">
 
       {/* UI Header / Title */}
-      <div className="absolute top-0 left-0 w-full px-6 py-3 z-10 pointer-events-none bg-gradient-to-b from-stone-50 via-stone-50/60 to-transparent">
-        <div className="flex items-baseline gap-3">
-          <h1 className="text-5xl md:text-6xl font-title text-stone-800 drop-shadow-sm tracking-wider">
-            <span className="text-amber-700">历史</span>长河
-          </h1>
-          <p className="text-stone-600 font-serif italic text-xs md:text-sm">
-            中华文明五千年，岁月如歌，逝者如斯夫。
-          </p>
+      <div className="absolute top-0 left-0 w-full px-6 py-3 z-10 pointer-events-none bg-gradient-to-b from-stone-50 via-stone-50/60 to-transparent flex justify-between items-start">
+        <div className="flex flex-col gap-2 pointer-events-auto">
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-5xl md:text-6xl font-title text-stone-800 drop-shadow-sm tracking-wider">
+              <span className="text-amber-700">历史</span>长河
+            </h1>
+          </div>
+
+          {/* Country Selector */}
+          <div className="flex gap-2 flex-wrap">
+            {COUNTRIES.map(c => (
+              <button
+                key={c.code}
+                onClick={() => setSelectedCountry(c.code)}
+                className={`px-3 py-1 rounded-full text-sm transition-all shadow-sm border
+                  ${selectedCountry === c.code
+                    ? 'bg-amber-700 text-white border-amber-800 scale-105 font-bold'
+                    : 'bg-white/80 text-stone-600 border-stone-200 hover:bg-stone-100'}`}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       <RiverCanvas
+        // Add key to force re-render on country change if needed, though props update should handle it
+        key={selectedCountry}
         width={dimensions.width}
         height={dimensions.height}
         dynasties={dynasties}
@@ -103,9 +145,6 @@ const App: React.FC = () => {
           onClose={() => setModalOpen(false)}
         />
       )}
-
-      {/* Podcast Player removed: navigate to standalone page */}
-
 
       {/* Buy Me A Coffee Button */}
       <div className="fixed bottom-4 right-4 z-50 transition-transform hover:scale-105">

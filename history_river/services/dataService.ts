@@ -1,11 +1,18 @@
 import { createClient } from '@supabase/supabase-js'
 import { Dynasty, HistoricalEvent, RiverPin } from '../types'
+import { WORLD_HISTORY } from '../data/worldHistory'
 
 const BASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '')
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 const supabase = (BASE_URL && ANON_KEY) ? createClient(BASE_URL, ANON_KEY) : null
 
-export async function fetchDynasties(): Promise<Dynasty[]> {
+export async function fetchDynasties(country: string = 'china'): Promise<Dynasty[]> {
+    if (country !== 'china') {
+        const data = WORLD_HISTORY[country];
+        return data ? data.dynasties : [];
+    }
+
+    // Default to China (Supabase)
     if (!supabase) return []
 
     const { data, error } = await supabase
@@ -29,7 +36,13 @@ export async function fetchDynasties(): Promise<Dynasty[]> {
     }))
 }
 
-export async function fetchEvents(): Promise<HistoricalEvent[]> {
+export async function fetchEvents(country: string = 'china'): Promise<HistoricalEvent[]> {
+    if (country !== 'china') {
+        const data = WORLD_HISTORY[country];
+        return data ? data.events : [];
+    }
+
+    // Default to China (Supabase)
     if (!supabase) return []
 
     const { data, error } = await supabase
