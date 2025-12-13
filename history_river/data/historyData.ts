@@ -48,7 +48,8 @@ export const DYNASTIES: Dynasty[] = [
     { id: 'ten_wuyue', name: 'Wuyue', chineseName: '吴越', startYear: 907, endYear: 978, color: '#22c55e', description: '钱氏据江浙，宋初纳土归朝。' },
     { id: 'ten_jingnan', name: 'Jingnan', chineseName: '荆南', startYear: 924, endYear: 963, color: '#f43f5e', description: '江陵小国，后并入宋。' },
     { id: 'ten_northern_han', name: 'NorthernHan', chineseName: '北汉', startYear: 951, endYear: 979, color: '#64748b', description: '并州割据，宋太宗并之。' },
-    { id: 'song', name: 'Song', chineseName: '宋', startYear: 960, endYear: 1279, color: '#059669', description: '经济繁荣，科技井喷（火药、指南针、活字印刷）。' },
+    { id: 'northern_song', name: 'Northern Song', chineseName: '北宋', startYear: 960, endYear: 1127, color: '#059669', description: '经济繁荣，科技井喷（火药、指南针、活字印刷）。' },
+    { id: 'southern_song', name: 'Southern Song', chineseName: '南宋', startYear: 1127, endYear: 1279, color: '#10b981', description: '南渡偏安，经济重心南移，海上丝绸之路繁荣。' },
     { id: 'yuan', name: 'Yuan', chineseName: '元', startYear: 1271, endYear: 1368, color: '#4f46e5', description: '蒙古统治，疆域辽阔，东西方交流频繁。' }, // Indigo 600
     { id: 'ming', name: 'Ming', chineseName: '明', startYear: 1368, endYear: 1644, color: '#b91c1c', description: '汉族光复，修故宫，郑和下西洋。' }, // Red 700
     { id: 'qing', name: 'Qing', chineseName: '清', startYear: 1636, endYear: 1912, color: '#1e40af', description: '最后的封建王朝，奠定现代中国版图。' },
