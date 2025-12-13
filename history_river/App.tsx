@@ -8,6 +8,7 @@ import { fetchDynasties, fetchEvents, fetchRiverPins } from './services/dataServ
 import { DYNASTIES as FALLBACK_DYNASTIES, KEY_EVENTS as FALLBACK_EVENTS } from './data/historyData';
 
 const COUNTRIES = [
+  { code: 'overview', label: '🌎 全览' },
   { code: 'china', label: '🇨🇳 中国 (China)' },
   { code: 'usa', label: '🇺🇸 美国 (USA)' },
   { code: 'uk', label: '🇬🇧 英国 (UK)' },
@@ -16,7 +17,6 @@ const COUNTRIES = [
   { code: 'russia', label: '🇷🇺 俄罗斯 (Russia)' },
   { code: 'india', label: '🇮🇳 印度 (India)' },
   { code: 'jp', label: '🇯🇵 日本' },
-  { code: 'overview', label: '🌎 全览' },
 ];
 
 const App: React.FC = () => {

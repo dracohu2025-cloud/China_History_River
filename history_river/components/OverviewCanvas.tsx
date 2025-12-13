@@ -185,6 +185,35 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
         return () => { svg.on('.zoom', null); };
     }, []);
 
+    // State for cursor
+    const [cursorX, setCursorX] = useState<number | null>(null);
+
+    // Throttled mouse move handler
+    const throttledMouseMove = useMemo(
+        () => throttle((e: MouseEvent) => {
+            if (!svgRef.current) return;
+            const svgRect = svgRef.current.getBoundingClientRect();
+            const mouseX = e.clientX - svgRect.left;
+            if (mouseX >= 0 && mouseX <= width) {
+                setCursorX(mouseX);
+            } else {
+                setCursorX(null);
+            }
+        }, 16),
+        [width]
+    );
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+        const container = containerRef.current;
+        container.addEventListener('mousemove', throttledMouseMove);
+        container.addEventListener('mouseleave', () => setCursorX(null));
+        return () => {
+            container.removeEventListener('mousemove', throttledMouseMove);
+            container.removeEventListener('mouseleave', () => setCursorX(null));
+        };
+    }, [throttledMouseMove]);
+
     return (
         <div
             ref={containerRef}
@@ -199,28 +228,66 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                 </defs>
 
                 {/* Render Rivers Group */}
-                {/* Note: We apply X transform and Scale K, but Y is calculated absolutely per row */}
-                {/* But wait, if we scale K, the X grows. We need to translate X. */}
                 <g transform={`translate(${viewport.x}, 0) scale(${viewport.k}, 1)`}>
                     {/* Grid Lines */}
                     <line x1={xScale(-3000)} y1={0} x2={xScale(2050)} y2={0} stroke="#e5e5e5" strokeWidth={1} vectorEffect="non-scaling-stroke" />
 
                     {COUNTRIES.map((country) => {
-                        const { series } = riversData[country];
+                        const { series, yScale } = riversData[country];
                         const countryDynasties = allDynasties[country];
 
                         return (
                             <g key={country}>
+                                {/* River Areas */}
                                 {series.map(layer => {
                                     const dynasty = countryDynasties.find(d => d.id === layer.key);
                                     if (!dynasty) return null;
                                     return (
-                                        <path
-                                            key={layer.key}
-                                            d={areaGens[country](layer as any) || ''}
-                                            fill={dynasty.color}
-                                            opacity={0.85}
-                                        />
+                                        <g key={layer.key}>
+                                            <path
+                                                d={areaGens[country](layer as any) || ''}
+                                                fill={dynasty.color}
+                                                opacity={0.85}
+                                            />
+                                            {/* Dynasty Label - Scaled Inverse to Zoom */}
+                                            {(() => {
+                                                const midYear = (dynasty.startYear + dynasty.endYear) / 2;
+                                                const yearX = xScale(midYear);
+
+                                                // Find approximate Y center at midYear
+                                                // We can use the layer data to find the height center
+                                                // Or just center of the row? No, dynasty might be small.
+                                                // Let's use row center for simplicity first, or calculate.
+                                                // Accurate: find data point at midYear
+                                                const dataIndex = Math.floor((midYear - DATA_START_YEAR) / DATA_STEP);
+                                                const point = layer[dataIndex];
+                                                // Calculate Y based on stack values.
+                                                const centerY = point ? yScale((point[0] + point[1]) / 2) : 0;
+
+                                                // Only show label if dynasty is wide enough relative to screen
+                                                const pixelWidth = (xScale(dynasty.endYear) - xScale(dynasty.startYear)) * viewport.k;
+                                                if (pixelWidth < 30) return null; // Too small
+
+                                                return (
+                                                    <text
+                                                        x={yearX}
+                                                        y={centerY}
+                                                        fill="rgba(255,255,255,0.9)"
+                                                        fontSize={Math.min(16, Math.max(10, pixelWidth / 5)) / viewport.k * 1.5} // Scale text so it stays readable but relative? No, usually we want fixed size text.
+                                                        // Actually, if we are inside a scaled group (scale(k, 1)), then x is Year position.
+                                                        // But text will be stretched horizontally if we don't counter-scale?
+                                                        // YES. The group has scale(k, 1). So text glyphs will be stretched wide.
+                                                        // verification: visual bug risk.
+                                                        // FIX: We should probably NOT put text inside the scaled group if we want it to look normal.
+                                                        // OR we apply transform={`scale(${1/viewport.k}, 1)`} to the text.
+                                                        transform={`scale(${1 / viewport.k}, 1)`}
+                                                    // Wait, if we scale the text node, we also scale its x position!
+                                                    // So we need to put text in a separate layer that is NOT scaled, but positioned using visibleXScale.
+                                                    // See below.
+                                                    />
+                                                )
+                                            })()}
+                                        </g>
                                     );
                                 })}
                             </g>
@@ -228,8 +295,65 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                     })}
                 </g>
 
-                {/* Labels Layer (Fixed X, but Y matches rows) */}
+                {/* Text Layer - Rendered *after* scale group to avoid distortion, positioned using visibleXScale */}
                 <g pointerEvents="none">
+                    {COUNTRIES.map((country) => {
+                        const { yScale } = riversData[country]; // Need proper yScale? Wait, riversData is computed in render.
+                        const { series, yScale: rowScale } = riversData[country]; // Access memoized data
+                        const countryDynasties = allDynasties[country];
+
+                        return (
+                            <g key={`text-${country}`}>
+                                {countryDynasties.map(dynasty => {
+                                    // Calculate visible bounds
+                                    const startX = visibleXScale(dynasty.startYear);
+                                    const endX = visibleXScale(dynasty.endYear);
+                                    const widthPx = endX - startX;
+
+                                    // Optimization: visible only
+                                    if (endX < 0 || startX > width) return null;
+                                    if (widthPx < 40) return null; // Hide if too small
+
+                                    const midYear = (dynasty.startYear + dynasty.endYear) / 2;
+                                    const midX = visibleXScale(midYear);
+
+                                    // Find Y center... tricky without data access here easily. 
+                                    // But we know the row logic: 
+                                    // The river is centered around rowCenter.
+                                    // Let's just place text at rowCenter (middle of the river lane)
+                                    // It might overlap with river edges, but for overview it's okay.
+                                    const idx = COUNTRIES.indexOf(country);
+                                    const rowCenter = (idx + 0.5) * (height / COUNTRIES.length);
+
+                                    return (
+                                        <text
+                                            key={dynasty.id}
+                                            x={midX}
+                                            y={rowCenter}
+                                            fill="rgba(255,255,255,0.95)"
+                                            fontSize={Math.min(14, widthPx / (dynasty.chineseName.length + 1))}
+                                            fontWeight="bold"
+                                            textAnchor="middle"
+                                            dominantBaseline="middle"
+                                            style={{
+                                                textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+                                                pointerEvents: 'none'
+                                            }}
+                                        >
+                                            {dynasty.chineseName}
+                                        </text>
+                                    )
+                                })}
+                            </g>
+                        )
+                    })}
+                </g>
+
+                {/* Country Labels Layer (Left Side) */}
+                <g pointerEvents="none">
+                    {/* Background for labels to make them readable over scrolling river? */}
+                    <rect x={0} y={0} width={100} height={height} fill="linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 100%)" opacity={0.5} />
+
                     {COUNTRIES.map((country, index) => {
                         const rowCenter = (index + 0.5) * ROW_HEIGHT;
                         return (
@@ -239,7 +363,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                     fontSize={14}
                                     fontWeight="bold"
                                     dominantBaseline="middle"
-                                    style={{ textShadow: '0 2px 4px rgba(255,255,255,0.8)' }}
+                                    style={{ textShadow: '0 2px 4px rgba(255,255,255,0.9)' }}
                                 >
                                     {countryLabels[country]}
                                 </text>
@@ -249,17 +373,49 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                     x2={width} y2={ROW_HEIGHT / 2}
                                     stroke="#e7e5e4"
                                     strokeWidth={1}
+                                    opacity={0.5}
                                 />
                             </g>
                         )
                     })}
                 </g>
 
+                {/* Cursor Line */}
+                {cursorX !== null && (
+                    <g pointerEvents="none">
+                        <line
+                            x1={cursorX}
+                            y1={0}
+                            x2={cursorX}
+                            y2={height}
+                            stroke="#ea580c"
+                            strokeWidth={1.5}
+                            strokeDasharray="4 4"
+                        />
+                        {/* Year Label at top of cursor */}
+                        <g transform={`translate(${cursorX}, 20)`}>
+                            <rect x={-24} y={-14} width={48} height={20} rx={4} fill="#ea580c" />
+                            <text
+                                x={0}
+                                y={0}
+                                fill="white"
+                                fontSize={11}
+                                fontWeight="bold"
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                            >
+                                {Math.round(visibleXScale.invert(cursorX))}
+                            </text>
+                        </g>
+                    </g>
+                )}
+
                 {/* Year Ruler (Top) */}
                 <g className="pointer-events-none">
                     <rect width={width} height={30} fill="url(#ruler-gradient)" />
                     {(() => {
                         const currentVisibleXScale = visibleXScale;
+                        /* Reusing previous logic */
                         const minYear = visibleXScale.invert(0);
                         const maxYear = visibleXScale.invert(width);
                         const span = maxYear - minYear;
