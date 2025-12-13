@@ -17,7 +17,7 @@ const COUNTRIES = [
   { code: 'germany', label: '🇩🇪 德国 (Germany)' },
   { code: 'russia', label: '🇷🇺 俄罗斯 (Russia)' },
   { code: 'india', label: '🇮🇳 印度 (India)' },
-  { code: 'jp', label: '🇯🇵 日本' },
+  { code: 'japan', label: '🇯🇵 日本' },
 ];
 
 const App: React.FC = () => {
@@ -56,11 +56,22 @@ const App: React.FC = () => {
           fetchEvents(selectedCountry)
         ]);
         // For China, we might have fallbacks. For others, allow empty.
-        if (d.length > 0) setDynasties(d);
-        else if (selectedCountry === 'china') setDynasties(FALLBACK_DYNASTIES);
+        // For China, we might have fallbacks. For others, allow empty and CLEAR state if empty.
+        if (d.length > 0) {
+          setDynasties(d);
+        } else if (selectedCountry === 'china') {
+          setDynasties(FALLBACK_DYNASTIES);
+        } else {
+          setDynasties([]);
+        }
 
-        if (e.length > 0) setEvents(e);
-        else if (selectedCountry === 'china') setEvents(FALLBACK_EVENTS);
+        if (e.length > 0) {
+          setEvents(e);
+        } else if (selectedCountry === 'china') {
+          setEvents(FALLBACK_EVENTS);
+        } else {
+          setEvents([]);
+        }
 
         // Pins removed as per request
         setPins([]);
