@@ -20,7 +20,9 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
     let isMounted = true;
     const loadDetails = async () => {
       setLoading(true);
-      const displayTitle = i18n.language.startsWith('zh') ? event.title : (event.titleEn || event.title);
+      const displayTitle = i18n.language.startsWith('zh')
+        ? (event.titleZh || event.title)
+        : (event.titleEn || event.title);
       const context = `Historical Event: ${displayTitle} (Type: ${event.type})`;
 
       try {

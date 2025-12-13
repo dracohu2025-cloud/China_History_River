@@ -566,7 +566,9 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
                     <text y={-4} fill="#b91c1c" fontSize={10} fontWeight={700} textAnchor="middle">1949</text>
 
                     {/* 标题 - 字体缩小一半 */}
-                    <text y={6} fill="#1f2937" fontSize={7} fontWeight={600} textAnchor="middle">新中国成立</text>
+                    <text y={6} fill="#1f2937" fontSize={7} fontWeight={600} textAnchor="middle">
+                      {i18n.language.startsWith('zh') ? '新中国成立' : 'PRC Founded'}
+                    </text>
                   </g>
                 </g>
               );
@@ -662,8 +664,8 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
                       {node.event.year < 0 ? t('date_format.bc', { year: Math.abs(node.event.year) }) : t('date_format.ad', { year: node.event.year })}
                     </tspan>
                     <tspan dx="6">
-                      {/* For now, fallback to Chinese for Japanese if titleEn is missing? No, stick to En for consistency unless proper translation exists */}
-                      {i18n.language.startsWith('zh') ? node.event.title : (node.event.titleEn || node.event.title)}
+                      {/* Display title based on language preference with fallback */}
+                      {i18n.language.startsWith('zh') ? (node.event.titleZh || node.event.title) : (node.event.titleEn || node.event.title)}
                     </tspan>
                   </text>
                 </g>
