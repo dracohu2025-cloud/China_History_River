@@ -107,6 +107,17 @@ const App: React.FC = () => {
       {/* Podcast Player removed: navigate to standalone page */}
 
 
+      {/* Buy Me A Coffee Button */}
+      <div className="fixed bottom-4 right-4 z-50 transition-transform hover:scale-105">
+        <a href="https://www.buymeacoffee.com/dracohu2027" target="_blank" rel="noreferrer">
+          <img
+            src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=dracohu2027&button_colour=BD5FFF&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00"
+            alt="Buy Me A Coffee"
+            className="h-10 md:h-12" // Adjust height for responsiveness
+          />
+        </a>
+      </div>
+
     </div>
   );
 };
