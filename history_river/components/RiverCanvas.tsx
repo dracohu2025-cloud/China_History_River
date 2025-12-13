@@ -561,7 +561,14 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
                   />
 
                   {/* 1949年事件标记 (无旗子) */}
-                  <g transform={`translate(${screenX_1949}, ${trackY + 14})`}>
+                  <g
+                    transform={`translate(${screenX_1949}, ${trackY + 14})`}
+                    className="cursor-pointer"
+                    onClick={(e) => handleEventClick(e, event1949)}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    role="button"
+                    tabIndex={0}
+                  >
                     {/* 年份 - 字体缩小一半 */}
                     <text y={-4} fill="#b91c1c" fontSize={10} fontWeight={700} textAnchor="middle">1949</text>
 
@@ -618,6 +625,7 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
                 transform={`translate(${finalX}, ${centerY})`}
                 className="cursor-pointer"
                 onClick={(e) => handleEventClick(e, node.event)}
+                onMouseDown={(e) => e.stopPropagation()} // Prevent D3 zoom from capturing click
                 style={{ zIndex: node.event.importance === 1 ? 50 : 10, pointerEvents: 'auto' }}
                 role="button"
                 tabIndex={0}
