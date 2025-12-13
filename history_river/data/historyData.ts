@@ -134,8 +134,10 @@ export const KEY_EVENTS: HistoricalEvent[] = [
 
     // --- 隋唐五代 ---
     { year: 589, title: '隋灭陈/统一全国', titleEn: 'Sui Unifies China', type: 'war', importance: 1 },
+    { year: 604, title: '隋炀帝登基', titleEn: 'Emperor Yang of Sui Enthronement', type: 'politics', importance: 2 },
     { year: 605, title: '开凿大运河', titleEn: 'Construction of Grand Canal', type: 'science', importance: 2 },
     { year: 605, title: '赵州桥建成', titleEn: 'Zhaozhou Bridge Built', type: 'science', importance: 4 },
+    { year: 618, title: '江都兵变', titleEn: 'Jiangdu Mutiny', type: 'war', importance: 2 },
     { year: 618, title: '唐朝建立', titleEn: 'Tang Dynasty Established', type: 'politics', importance: 1 },
     { year: 626, title: '玄武门之变', titleEn: 'Xuanwu Gate Incident', type: 'politics', importance: 2 },
     { year: 629, title: '玄奘西行', titleEn: 'Xuanzang\'s Journey to West', type: 'culture', importance: 2 },

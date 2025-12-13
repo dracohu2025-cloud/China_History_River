@@ -664,8 +664,10 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
                       {node.event.year < 0 ? t('date_format.bc', { year: Math.abs(node.event.year) }) : t('date_format.ad', { year: node.event.year })}
                     </tspan>
                     <tspan dx="6">
-                      {/* Display title based on language preference with fallback */}
-                      {i18n.language.startsWith('zh') ? (node.event.titleZh || node.event.title) : (node.event.titleEn || node.event.title)}
+                      {/* Prioritize English check, default to Chinese/Native if not English */}
+                      {i18n.language.startsWith('en') ? (node.event.titleEn || node.event.title) : (node.event.titleZh || node.event.title)}
+                      {/* DEBUG: Show language to debug if it persists */}
+                      {/* {` [${i18n.language}]`} */}
                     </tspan>
                   </text>
                 </g>
