@@ -528,7 +528,7 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
                     opacity: viewport.k > 0.2 ? 1 : 0.3 // 降低文字显示阈值，并添加半透明状态
                   }}
                 >
-                  {dynasty.chineseName}
+                  {t(`dynasties.${dynasty.id}`, { defaultValue: dynasty.name })}
                 </text>
               </g>
             );
@@ -662,6 +662,7 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
                       {node.event.year < 0 ? t('date_format.bc', { year: Math.abs(node.event.year) }) : t('date_format.ad', { year: node.event.year })}
                     </tspan>
                     <tspan dx="6">
+                      {/* For now, fallback to Chinese for Japanese if titleEn is missing? No, stick to En for consistency unless proper translation exists */}
                       {i18n.language.startsWith('zh') ? node.event.title : (node.event.titleEn || node.event.title)}
                     </tspan>
                   </text>
