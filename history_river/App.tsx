@@ -174,14 +174,12 @@ const App: React.FC = () => {
           </button>
            */}
 
-          <a
-            href="https://www.buymeacoffee.com/dracohu"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-[#FFDD00] text-black px-4 py-2 rounded-xl font-bold shadow-lg shadow-yellow-500/20 hover:bg-[#FFEA00] hover:scale-105 active:scale-95 transition-all text-sm flex items-center gap-2"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.216 6.415l-.132-.666c-.119-.596-.387-1.143-.778-1.597-.475-.551-1.054-.913-1.681-1.047-.565-.121-1.166-.07-1.743.149V3.2a1.8 1.8 0 0 0-1.8-1.8h-7.2a1.8 1.8 0 0 0-1.8 1.8v1.652c-.628.219-1.25.593-1.782 1.107-.904.872-1.373 2.127-1.248 3.518.2 2.235 1.571 4.298 3.03 5.485.006.195.006.398.026.598.243 2.503 1.958 4.606 4.318 5.436V22.2a.6.6 0 0 0 .6.6h3.6a.6.6 0 0 0 .6-.6v-1.189c2.394-.79 4.14-2.887 4.382-5.418.02-.213.018-.429.023-.639 1.144-.882 1.854-2.228 1.984-3.753.167-1.95-.615-3.665-2.199-4.786zM5.5 8.6c-.089-.994.229-1.884.869-2.502.261-.252.56-.444.891-.568v6.234c-.732-.825-1.618-2.023-1.76-3.164zm9.328 11.233c-.097 1.977-1.603 3.616-3.526 3.963v-1.396a.6.6 0 1 0-1.2 0v1.396c-1.924-.347-3.429-1.986-3.526-3.963-.03-.615.01-3.605 4.126-3.605 4.099 0 4.156 2.956 4.126 3.605zm3.766-8.599c-.198 2.308-2.618 3.195-3.8 3.195a.6.6 0 0 0-.6.6c0 1.258-.027 3.553-3.088 3.585-3.08.032-3.107-2.327-3.107-3.585a.6.6 0 0 0-.6-.6c-1.25 0-3.674-.95-3.8-3.195-.125-2.238 2.723-3.69 3.8-3.69V3.2a.6.6 0 0 1 .6-.6h7.2a.6.6 0 0 1 .6.6v3.136c.995 0 3.82 1.407 3.695 3.698-.073 1.353-.61 2.385-1.547 3.033-.352.245-.758.41-1.153.488zm2.094-1.261c-.094 1.104-.647 2.106-1.503 2.802-.379-.623-.628-1.527-.628-2.66V6.152c.582.029 1.17.29 1.554.764.291.339.49.746.577 1.185.004.02.012.039.015.06.096 1.059.07 1.144-.015 2.179z" /></svg>
-            <span className="hidden sm:inline">{t('app.buy_coffee')}</span>
+          <a href="https://www.buymeacoffee.com/dracohu2027" target="_blank" rel="noopener noreferrer">
+            <img
+              src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=dracohu2027&button_colour=BD5FFF&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00"
+              alt="Buy me a coffee"
+              className="h-10 hover:scale-105 transition-transform"
+            />
           </a>
         </div>
       </div>
