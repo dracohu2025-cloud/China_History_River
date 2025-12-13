@@ -226,6 +226,10 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                         <stop offset="0%" stopColor="rgba(255, 255, 255, 0.9)" />
                         <stop offset="100%" stopColor="rgba(255, 255, 255, 0)" />
                     </linearGradient>
+                    <linearGradient id="sidebar-gradient" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="rgba(255, 255, 255, 0.95)" />
+                        <stop offset="100%" stopColor="rgba(255, 255, 255, 0)" />
+                    </linearGradient>
                 </defs>
 
                 {/* Content Container with Y Translation */}
@@ -252,38 +256,59 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                                     fill={dynasty.color}
                                                     opacity={0.85}
                                                 />
-                                                {/* Dynasty Label - Scaled Inverse to Zoom */}
-                                                {(() => {
-                                                    const midYear = (dynasty.startYear + dynasty.endYear) / 2;
-                                                    const yearX = xScale(midYear);
-
-                                                    const dataIndex = Math.floor((midYear - DATA_START_YEAR) / DATA_STEP);
-                                                    const point = layer[dataIndex];
-                                                    const centerY = point ? riversData[country].yScale((point[0] + point[1]) / 2) : 0;
-
-                                                    const pixelWidth = (xScale(dynasty.endYear) - xScale(dynasty.startYear)) * viewport.k;
-                                                    if (pixelWidth < 30) return null;
-
-                                                    return (
-                                                        <text
-                                                            x={yearX}
-                                                            y={centerY}
-                                                            fill="rgba(255,255,255,0.9)"
-                                                            fontSize={Math.min(16, Math.max(10, pixelWidth / 5)) / viewport.k * 1.5}
-                                                            transform={`scale(${1 / viewport.k}, 1)`}
-                                                            style={{
-                                                                textShadow: '0 1px 2px rgba(0,0,0,0.6)',
-                                                                pointerEvents: 'none'
-                                                            }}
-                                                            textAnchor="middle"
-                                                            dominantBaseline="middle"
-                                                        >
-                                                            {dynasty.chineseName}
-                                                        </text>
-                                                    )
-                                                })()}
                                             </g>
                                         );
+                                    })}
+                                </g>
+                            )
+                        })}
+                    </g>
+
+                    {/* Dynasty Labels Layer - Separate to avoid distortion */}
+                    <g pointerEvents="none">
+                        {COUNTRIES.map((country) => {
+                            const { yScale } = riversData[country];
+                            const countryDynasties = allDynasties[country];
+
+                            return (
+                                <g key={`text-${country}`}>
+                                    {countryDynasties.map(dynasty => {
+                                        // Calculate visible bounds
+                                        const startX = visibleXScale(dynasty.startYear);
+                                        const endX = visibleXScale(dynasty.endYear);
+                                        const widthPx = endX - startX;
+
+                                        // Optimization: visible only
+                                        if (endX < 0 || startX > width) return null;
+                                        if (widthPx < 40) return null; // Hide if too small
+
+                                        const midYear = (dynasty.startYear + dynasty.endYear) / 2;
+                                        const midX = visibleXScale(midYear);
+
+                                        // Use yScale from data preparation to find centered Y
+                                        // But we don't have easy access to the exact stacked Y here without looking up data again.
+                                        // Ideally we stick to the row center approximation for labels, or use the yScale(0).
+                                        // riversData[country].yScale domain is [-150, 150]. 0 is center.
+                                        const centerY = yScale(0);
+
+                                        return (
+                                            <text
+                                                key={dynasty.id}
+                                                x={midX}
+                                                y={centerY}
+                                                fill="rgba(255,255,255,0.95)"
+                                                fontSize={Math.min(16, Math.max(12, widthPx / (dynasty.chineseName.length + 1)))}
+                                                fontWeight="bold"
+                                                textAnchor="middle"
+                                                dominantBaseline="middle"
+                                                style={{
+                                                    textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+                                                    pointerEvents: 'none'
+                                                }}
+                                            >
+                                                {dynasty.chineseName}
+                                            </text>
+                                        )
                                     })}
                                 </g>
                             )
@@ -293,7 +318,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                     {/* Country Labels Layer (Left Side) - Only moves in Y */}
                     <g pointerEvents="none">
                         {/* Background for labels - spans full height based on number of countries */}
-                        <rect x={0} y={0} width={120} height={COUNTRIES.length * ROW_HEIGHT} fill="linear-gradient(90deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 100%)" opacity={0.8} />
+                        <rect x={0} y={0} width={120} height={COUNTRIES.length * ROW_HEIGHT} fill="url(#sidebar-gradient)" />
 
                         {COUNTRIES.map((country, index) => {
                             const rowCenter = (index + 0.5) * ROW_HEIGHT;
