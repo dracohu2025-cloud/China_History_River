@@ -53,9 +53,13 @@ export async function fetchEvents(country: string = 'china'): Promise<Historical
 }
 
 export async function fetchRiverPins(country: string = 'china'): Promise<RiverPin[]> {
-    if (country !== 'china') return [];
+    if (!supabase) return [];
 
-    const { data, error } = await supabase.from('river_pins').select('*').order('year', { ascending: true });
+    const { data, error } = await supabase
+        .from('river_pins')
+        .select('*')
+        .eq('country', country)
+        .order('year', { ascending: true });
     if (error) {
         console.error('Error fetching river pins:', error);
         return [];
