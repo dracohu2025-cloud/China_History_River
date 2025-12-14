@@ -68,8 +68,24 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
     const zoomRef = useRef<d3.ZoomBehavior<Element, unknown> | null>(null);
     const isBrowser = typeof window !== 'undefined';
 
-    const COUNTRIES = Object.keys(allDynasties);
-    const ROW_HEIGHT = height / (COUNTRIES.length || 1);
+    const [orderedCountries, setOrderedCountries] = useState<string[]>([]);
+
+    // Initialize or update orderedCountries when allDynasties changes
+    useEffect(() => {
+        const countries = Object.keys(allDynasties);
+        // Only update if the set of countries changed to preserve order
+        setOrderedCountries(prev => {
+            const prevSet = new Set(prev);
+            const newSet = new Set(countries);
+            if (prevSet.size !== newSet.size || !countries.every(c => prevSet.has(c))) {
+                return countries;
+            }
+            return prev;
+        });
+    }, [allDynasties]);
+
+    const COUNTRIES_LIST = orderedCountries.length > 0 ? orderedCountries : Object.keys(allDynasties);
+    const ROW_HEIGHT = height / (COUNTRIES_LIST.length || 1);
 
     // Optimized viewport state with RAF smoothing
     const [viewport, setViewport] = useSmoothViewport(() => {
@@ -80,6 +96,11 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
         const y = 0; // No vertical panning needed usually for fixed rows, possibly locked
         return { x, y, k };
     });
+
+    // Drag state
+    const [draggingCountry, setDraggingCountry] = useState<string | null>(null);
+    const [dragOffset, setDragOffset] = useState<number>(0);
+    const draggingRef = useRef<{ country: string | null, offset: number, startIndex: number }>({ country: null, offset: 0, startIndex: -1 });
 
     // Recalculate when dimensions change
     useEffect(() => {
@@ -106,7 +127,8 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
     const riversData = useMemo(() => {
         const result: { [country: string]: { series: any[], yScale: d3.ScaleLinear<number, number> } } = {};
 
-        COUNTRIES.forEach((country, index) => {
+        // Use ALL countries to ensure data exists even if order changes
+        Object.keys(allDynasties).forEach((country) => {
             const dynasties = allDynasties[country];
             const data = [];
             for (let y = DATA_START_YEAR; y <= DATA_END_YEAR; y += DATA_STEP) {
@@ -128,23 +150,22 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
 
             const series = stack(data);
 
-            // Individual Y-scale for each row
-            // Row center is (index + 0.5) * ROW_HEIGHT
-            // We map domain [-100, 100] (power range assumption) to that row height with padding
-            const rowCenter = (index + 0.5) * ROW_HEIGHT;
+            // Individual Y-scale for each row, keyed generically 0-centered
+            // We will translate this scale when rendering
             const halfHeight = ROW_HEIGHT * 0.4; // 80% usage
             const yScale = d3.scaleLinear()
                 .domain([-150, 150]) // Same domain as main river for consistency
-                .range([rowCenter + halfHeight, rowCenter - halfHeight]);
+                .range([halfHeight, -halfHeight]); // 0 is center
 
             result[country] = { series, yScale };
         });
         return result;
-    }, [allDynasties, ROW_HEIGHT, COUNTRIES]);
+    }, [allDynasties, ROW_HEIGHT]);
 
     const areaGens = useMemo(() => {
         const gens: { [country: string]: d3.Area<any> } = {};
-        COUNTRIES.forEach(country => {
+        Object.keys(allDynasties).forEach(country => {
+            // Generator now relative to 0 y-center
             gens[country] = d3.area<any>()
                 .x(d => xScale(d.data.year))
                 .y0(d => riversData[country].yScale(d[0]))
@@ -152,7 +173,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                 .curve(d3.curveBasis);
         });
         return gens;
-    }, [xScale, riversData, COUNTRIES]);
+    }, [xScale, riversData, allDynasties]);
 
 
     // Zoom Behavior
@@ -187,6 +208,59 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
 
         return () => { svg.on('.zoom', null); };
     }, []); // Run once on mount
+
+    // Drag Behavior for reordering
+    useEffect(() => {
+        if (!svgRef.current) return;
+        const svg = d3.select(svgRef.current);
+
+        // Select all handle groups - use a specific class
+        const handles = svg.selectAll('.drag-handle-group');
+
+        const drag = d3.drag<SVGGElement, string>()
+            .on('start', (event, d) => {
+                // Prevent zoom during drag
+                if (event.sourceEvent) event.sourceEvent.stopPropagation();
+
+                const index = orderedCountries.indexOf(d);
+                draggingRef.current = { country: d, offset: 0, startIndex: index };
+                setDraggingCountry(d);
+                setDragOffset(0);
+            })
+            .on('drag', (event) => {
+                const newOffset = draggingRef.current.offset + event.dy;
+                draggingRef.current.offset = newOffset;
+                setDragOffset(newOffset);
+            })
+            .on('end', () => {
+                const { country, offset, startIndex } = draggingRef.current;
+
+                if (country && Math.abs(offset) > 5) {
+                    const rowHeight = height / (orderedCountries.length || 1);
+                    // Calculate how many rows we moved
+                    const moveRows = Math.round(offset / rowHeight);
+                    const targetIndex = Math.max(0, Math.min(orderedCountries.length - 1, startIndex + moveRows));
+
+                    if (targetIndex !== startIndex) {
+                        const newOrder = [...orderedCountries];
+                        newOrder.splice(startIndex, 1);
+                        newOrder.splice(targetIndex, 0, country);
+                        setOrderedCountries(newOrder);
+                    }
+                }
+
+                setDraggingCountry(null);
+                setDragOffset(0);
+                draggingRef.current = { country: null, offset: 0, startIndex: -1 };
+            });
+
+        // Apply drag behavior to selection
+        handles.call(drag as any);
+
+        // Clean up OLD drag handlers from previous renders would be tricky with D3 + React
+        // Ideally we re-run this when orderedCountries changes? Yes.
+
+    }, [orderedCountries, height]); // Re-bind when list changes
 
     // State for cursor
     const [cursorX, setCursorX] = useState<number | null>(null);
@@ -247,23 +321,26 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                     {/* Render Rivers Group (X + K transform) */}
                     <g transform={`translate(${viewport.x}, 0) scale(${viewport.k}, 1)`}>
                         {/* Grid Lines */}
-                        {/* Grid Lines */}
                         <line x1={xScale(-3000)} y1={0} x2={xScale(2050)} y2={0} stroke="#e5e5e5" strokeWidth={1} vectorEffect="non-scaling-stroke" />
 
                         {(() => {
                             // Dynamic height scaling: Thinner tracks when zoomed out
                             const heightScale = Math.min(1, Math.max(0.1, viewport.k / 0.12));
 
-                            return COUNTRIES.map((country, index) => {
+                            return COUNTRIES_LIST.map((country, index) => {
                                 const { series } = riversData[country];
                                 const countryDynasties = allDynasties[country];
                                 const rowCenter = (index + 0.5) * ROW_HEIGHT;
 
+                                // Drag transform
+                                const isDragging = draggingCountry === country;
+                                const yTranslate = isDragging ? rowCenter + dragOffset : rowCenter;
+
                                 return (
                                     <g
                                         key={country}
-                                        style={{ transition: 'transform 0.1s' }}
-                                        transform={`translate(0, ${rowCenter}) scale(1, ${heightScale}) translate(0, ${-rowCenter})`}
+                                        style={{ transition: isDragging ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0, 0.2, 1)' }}
+                                        transform={`translate(0, ${yTranslate}) scale(1, ${heightScale})`}
                                     >
                                         {series.map(layer => {
                                             const dynasty = countryDynasties.find(d => d.id === layer.key);
@@ -286,12 +363,21 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
 
                     {/* Dynasty Labels Layer - Separate to avoid distortion */}
                     <g pointerEvents="none">
-                        {COUNTRIES.map((country) => {
+                        {COUNTRIES_LIST.map((country, index) => {
                             const { series, yScale } = riversData[country];
                             const countryDynasties = allDynasties[country];
+                            const rowCenter = (index + 0.5) * ROW_HEIGHT;
+
+                            // Drag transform for labels too
+                            const isDragging = draggingCountry === country;
+                            const yTranslate = isDragging ? rowCenter + dragOffset : rowCenter;
 
                             return (
-                                <g key={`text-${country}`}>
+                                <g
+                                    key={`text-${country}`}
+                                    style={{ transition: isDragging ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0, 0.2, 1)' }}
+                                    transform={`translate(0, ${yTranslate})`}
+                                >
                                     {series.map(layer => {
                                         const dynasty = countryDynasties.find(d => d.id === layer.key);
                                         if (!dynasty) return null;
@@ -308,20 +394,12 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                         const midYear = (dynasty.startYear + dynasty.endYear) / 2;
                                         const midX = visibleXScale(midYear);
 
-                                        // Precise Y calculation based on stack data
+                                        // Precise Y calculation based on stack data relative to 0
                                         const dataIndex = Math.floor((midYear - DATA_START_YEAR) / DATA_STEP);
                                         const point = layer[dataIndex];
-
-                                        // If point exists, use the average of y0 and y1. 
-                                        // Fallback to row center only if data is missing (unlikely within range).
-                                        let centerY = yScale(0);
-                                        if (point) {
-                                            const y0 = point[0];
-                                            const y1 = point[1];
-                                            // Handle cases where y0/y1 might be NaN (though D3 stack usually handles this)
-                                            if (!isNaN(y0) && !isNaN(y1)) {
-                                                centerY = yScale((y0 + y1) / 2);
-                                            }
+                                        let centerY = 0; // Relative to row center which is now 0 in local coord
+                                        if (point && !isNaN(point[0]) && !isNaN(point[1])) {
+                                            centerY = yScale((point[0] + point[1]) / 2);
                                         }
 
                                         const name = getDynastyName(dynasty);
@@ -350,31 +428,57 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                     </g>
 
                     {/* Country Labels Layer (Left Side) - Only moves in Y */}
-                    <g pointerEvents="none">
+                    <g>
                         {/* Background for labels - spans full height based on number of countries */}
-                        <rect x={0} y={0} width={120} height={COUNTRIES.length * ROW_HEIGHT} fill="url(#sidebar-gradient)" />
+                        <rect x={0} y={0} width={120} height={COUNTRIES_LIST.length * ROW_HEIGHT} fill="url(#sidebar-gradient)" pointerEvents="none" />
 
-                        {COUNTRIES.map((country, index) => {
+                        {COUNTRIES_LIST.map((country, index) => {
                             const rowCenter = (index + 0.5) * ROW_HEIGHT;
+                            const isDragging = draggingCountry === country;
+                            const yTranslate = isDragging ? rowCenter + dragOffset : rowCenter;
+
                             return (
-                                <g key={`label-${country}`} transform={`translate(20, ${rowCenter})`}>
+                                <g
+                                    key={`label-${country}`}
+                                    className="drag-handle-group"
+                                    transform={`translate(0, ${yTranslate})`} // Translate whole group
+                                    style={{
+                                        transition: isDragging ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0, 0.2, 1)',
+                                        cursor: isDragging ? 'grabbing' : 'grab'
+                                    }}
+                                >
+                                    {/* Handle hit area */}
+                                    <rect x={0} y={-ROW_HEIGHT / 2} width={100} height={ROW_HEIGHT} fill="transparent" />
+
+                                    {/* Handle Icon (Hamburger) */}
+                                    <g transform="translate(14, -5)" stroke="#a8a29e" strokeWidth={2}>
+                                        <line x1={0} y1={0} x2={12} y2={0} />
+                                        <line x1={0} y1={5} x2={12} y2={5} />
+                                        <line x1={0} y1={10} x2={12} y2={10} />
+                                    </g>
+
                                     <text
+                                        x={40}
                                         fill="#292524"
                                         fontSize={14}
                                         fontWeight="bold"
                                         dominantBaseline="middle"
-                                        style={{ textShadow: '0 2px 4px rgba(255,255,255,0.9)' }}
+                                        style={{ textShadow: '0 2px 4px rgba(255,255,255,0.9)', userSelect: 'none' }}
                                     >
                                         {countryLabels[country]}
                                     </text>
-                                    {/* Separator line */}
-                                    <line
-                                        x1={-20} y1={ROW_HEIGHT / 2}
-                                        x2={width} y2={ROW_HEIGHT / 2}
-                                        stroke="#e7e5e4"
-                                        strokeWidth={1}
-                                        opacity={0.5}
-                                    />
+
+                                    {/* Separator line - Hide when dragging for cleaner look */}
+                                    {!isDragging && (
+                                        <line
+                                            x1={0} y1={ROW_HEIGHT / 2}
+                                            x2={width} y2={ROW_HEIGHT / 2}
+                                            stroke="#e7e5e4"
+                                            strokeWidth={1}
+                                            opacity={0.5}
+                                            pointerEvents="none"
+                                        />
+                                    )}
                                 </g>
                             )
                         })}
@@ -382,10 +486,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
 
                 </g> {/* End of Y-translated group */}
 
-                {/* Cursor Line - Needs to account for Y translation? 
-                    The cursor X is screen space. The Y line draws full height.
-                    This overlays everything, so it's fine.
-                */}
+                {/* Cursor Line */}
                 {cursorX !== null && (
                     <g pointerEvents="none">
                         <line
@@ -414,7 +515,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                     </g>
                 )}
 
-                {/* Year Ruler (Top) - FIXED, DOES NOT MOVE Y */}
+                {/* Year Ruler (Top) */}
                 <g className="pointer-events-none">
                     <rect width={width} height={30} fill="url(#ruler-gradient)" />
                     {(() => {
