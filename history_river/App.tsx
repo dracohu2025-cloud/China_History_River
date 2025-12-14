@@ -125,16 +125,12 @@ const App: React.FC = () => {
   }, []);
 
   const handleEventSelect = (event: HistoricalEvent | null, year: number) => {
-    // ✅ 只有点击具体历史事件时才显示弹窗
-    // 点击空白年份(event为null)不显示任何内容
+    console.log('App: handleEventSelect called', event, year);
+    setSelectedEvent(event);
+    setSelectedYear(year);
     if (event) {
-      const currentYear = new Date().getFullYear();
-      // 额外检查年份合理性（虽然历史数据应该都<=当前年份）
-      if (year <= currentYear) {
-        setSelectedEvent(event);
-        setSelectedYear(year);
-        setModalOpen(true);
-      }
+      setModalOpen(true);
+      console.log('App: opening modal for', event.title);
     }
     // event 为 null 时什么都不做，不查询不显示
   };

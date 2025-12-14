@@ -374,8 +374,16 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
         if (event.type === 'wheel') return true;
         // Check for secondary buttons or ctrl key (standard D3 filter)
         if (event.ctrlKey || event.button) return false;
+
         // Ignore zoom on clickable elements to allow React onClick to fire
-        return !event.target.closest('.cursor-pointer');
+        // Added safety check for target.closest
+        const target = event.target as Element;
+        const isClickable = target && target.closest && target.closest('.cursor-pointer');
+        if (isClickable) {
+          console.log('RiverCanvas: Zoom filtered on clickable element');
+          return false;
+        }
+        return true;
       })
       .on('zoom', (event) => {
         const { transform } = event;
@@ -454,6 +462,7 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
 
   // Handle event clicks
   const handleEventClick = useCallback((e: React.MouseEvent, event: HistoricalEvent) => {
+    console.log('RiverCanvas: Event Clicked', event.title, event.year);
     e.stopPropagation();
     onEventSelect(event, event.year);
   }, [onEventSelect]);
