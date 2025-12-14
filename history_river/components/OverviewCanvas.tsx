@@ -66,8 +66,8 @@ const DATA_STEP = 5; // Use coarser step for overview to improve performance
 const INITIAL_ZOOM = 0.12;
 const MIN_ZOOM = 0.05;
 const MAX_ZOOM = 10;
-const EVENT_DOT_THRESHOLD = 0.5;
-const EVENT_LABEL_THRESHOLD = 1.2;
+const EVENT_DOT_THRESHOLD = 0.3;
+const EVENT_LABEL_THRESHOLD = 0.8;
 
 const COUNTRIES_LIST = ['china', 'usa', 'uk', 'france', 'germany', 'russia', 'india', 'japan'];
 
@@ -154,8 +154,9 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
 
             const maxY = d3.max(series, layer => d3.max(layer, d => d[1])) || 0;
             const minY = d3.min(series, layer => d3.min(layer, d => d[0])) || 0;
-            // Prevent domain [0, 0] which causes NaN in scaleLinear
-            const maxExtent = Math.max(Math.abs(maxY), Math.abs(minY)) || 1;
+            // Use fixed domain to make smaller civilizations look thinner (visually proportionate)
+            // instead of filling the full row height. Max power is roughly 90.
+            const maxExtent = 55;
 
             const yScale = d3.scaleLinear()
                 .domain([-maxExtent, maxExtent])
