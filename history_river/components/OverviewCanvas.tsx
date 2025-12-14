@@ -143,9 +143,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                 const point: any = { year };
                 dynasties.forEach(d => {
                     const power = getDynastyPower(d, year);
-                    if (power > 0) {
-                        point[d.id] = power;
-                    }
+                    point[d.id] = power > 0 ? power : 0;
                 });
                 return point;
             });
