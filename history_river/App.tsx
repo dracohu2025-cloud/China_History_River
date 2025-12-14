@@ -61,6 +61,8 @@ const App: React.FC = () => {
           newAllEvents[c.code] = eventResults[idx];
         });
 
+        console.log('[App] Loaded events for overview:', Object.keys(newAllEvents).map(k => `${k}: ${newAllEvents[k]?.length}`));
+
         setAllDynasties(newAllDynasties);
         setAllEvents(newAllEvents);
 
