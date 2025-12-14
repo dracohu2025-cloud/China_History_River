@@ -66,8 +66,8 @@ const DATA_STEP = 5; // Use coarser step for overview to improve performance
 const INITIAL_ZOOM = 0.12;
 const MIN_ZOOM = 0.05;
 const MAX_ZOOM = 10;
-const EVENT_DOT_THRESHOLD = 0.3;
-const EVENT_LABEL_THRESHOLD = 0.8;
+const EVENT_DOT_THRESHOLD = 0.1;
+const EVENT_LABEL_THRESHOLD = 0.4;
 
 const COUNTRIES_LIST = ['china', 'usa', 'uk', 'france', 'germany', 'russia', 'india', 'japan'];
 
@@ -133,11 +133,13 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
     // Calculate river data (Memoized)
     const riversData = useMemo(() => {
         const data: { [key: string]: { series: any[], yScale: any } } = {};
+        let globalMaxAbsY = 0;
+
+        // First pass: Calculate series and find global max extent
+        const countrySeries: { [key: string]: any[] } = {};
 
         COUNTRIES_LIST.forEach(country => {
             const dynasties = allDynasties[country] || [];
-
-            // Generate data points
             const years = d3.range(DATA_START_YEAR, DATA_END_YEAR + 1, DATA_STEP);
             const riverPoints = years.map(year => {
                 const point: any = { year };
@@ -151,18 +153,24 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
             const keys = dynasties.map(d => d.id);
             const stack = d3.stack().keys(keys).offset(d3.stackOffsetSilhouette);
             const series = stack(riverPoints);
+            countrySeries[country] = series;
 
             const maxY = d3.max(series, layer => d3.max(layer, d => d[1])) || 0;
             const minY = d3.min(series, layer => d3.min(layer, d => d[0])) || 0;
-            // Use fixed domain to make smaller civilizations look thinner (visually proportionate)
-            // instead of filling the full row height. Max power is roughly 90.
-            const maxExtent = 55;
+            globalMaxAbsY = Math.max(globalMaxAbsY, Math.abs(maxY), Math.abs(minY));
+        });
 
+        // Use global max to ensure consistent scaling and prevent overlap
+        // Buffer of 1.1 for safety
+        const maxExtent = Math.max(globalMaxAbsY * 1.1, 55);
+
+        // Second pass: Create scales
+        COUNTRIES_LIST.forEach(country => {
             const yScale = d3.scaleLinear()
                 .domain([-maxExtent, maxExtent])
-                .range([-ROW_HEIGHT / 2 * 0.9, ROW_HEIGHT / 2 * 0.9]); // 90% of row height
+                .range([-ROW_HEIGHT / 2 * 0.9, ROW_HEIGHT / 2 * 0.9]);
 
-            data[country] = { series, yScale };
+            data[country] = { series: countrySeries[country], yScale };
         });
 
         return data;
