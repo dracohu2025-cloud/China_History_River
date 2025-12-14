@@ -7,6 +7,7 @@ import PodcastPlayerModal from './components/PodcastPlayerModal';
 import { HistoricalEvent, Dynasty, RiverPin } from './types';
 import { fetchDynasties, fetchEvents, fetchRiverPins } from './services/dataService';
 import { DYNASTIES as FALLBACK_DYNASTIES, KEY_EVENTS as FALLBACK_EVENTS } from './data/historyData';
+import { WORLD_HISTORY } from './data/worldHistory';
 
 const COUNTRIES = [
   { code: 'overview', label: '🌎 全览' },
@@ -16,6 +17,9 @@ const COUNTRIES = [
   { code: 'france', label: '🇫🇷 法国 (France)' },
   { code: 'germany', label: '🇩🇪 德国 (Germany)' },
   { code: 'russia', label: '🇷🇺 俄罗斯 (Russia)' },
+  { code: 'poland', label: '🇵🇱 波兰 (Poland)' },
+  { code: 'greece', label: '🇬🇷 希腊 (Greece)' },
+  { code: 'italy', label: '🇮🇹 意大利 (Italy)' },
   { code: 'india', label: '🇮🇳 印度 (India)' },
   { code: 'japan', label: '🇯🇵 日本' },
 ];
@@ -57,8 +61,21 @@ const App: React.FC = () => {
         const newAllEvents: { [code: string]: HistoricalEvent[] } = {};
 
         targetCountries.forEach((c, idx) => {
-          newAllDynasties[c.code] = dynastyResults[idx];
-          newAllEvents[c.code] = eventResults[idx];
+          let d = dynastyResults[idx];
+          let e = eventResults[idx];
+
+          if (!d || d.length === 0) {
+            if (c.code === 'china') d = FALLBACK_DYNASTIES;
+            else if (WORLD_HISTORY[c.code]) d = WORLD_HISTORY[c.code].dynasties;
+          }
+
+          if (!e || e.length === 0) {
+            if (c.code === 'china') e = FALLBACK_EVENTS;
+            else if (WORLD_HISTORY[c.code]) e = WORLD_HISTORY[c.code].events;
+          }
+
+          newAllDynasties[c.code] = d || [];
+          newAllEvents[c.code] = e || [];
         });
 
         setAllDynasties(newAllDynasties);

@@ -70,7 +70,7 @@ const EVENT_DOT_THRESHOLD = 0.1;
 
 const EVENT_LABEL_THRESHOLD = 0.4;
 
-const COUNTRIES_LIST = ['china', 'usa', 'uk', 'france', 'germany', 'russia', 'india', 'japan'];
+const COUNTRIES_LIST = ['china', 'usa', 'uk', 'france', 'germany', 'russia', 'poland', 'greece', 'italy', 'india', 'japan'];
 
 const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynasties, allEvents, countryLabels, onEventSelect }) => {
     const containerRef = useRef<HTMLDivElement>(null);
