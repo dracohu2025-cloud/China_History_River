@@ -91,6 +91,8 @@ const App: React.FC = () => {
           setDynasties(d);
         } else if (selectedCountry === 'china') {
           setDynasties(FALLBACK_DYNASTIES);
+        } else if (WORLD_HISTORY[selectedCountry]) {
+          setDynasties(WORLD_HISTORY[selectedCountry].dynasties);
         } else {
           setDynasties([]);
         }
@@ -99,6 +101,8 @@ const App: React.FC = () => {
           setEvents(e);
         } else if (selectedCountry === 'china') {
           setEvents(FALLBACK_EVENTS);
+        } else if (WORLD_HISTORY[selectedCountry]) {
+          setEvents(WORLD_HISTORY[selectedCountry].events);
         } else {
           setEvents([]);
         }
