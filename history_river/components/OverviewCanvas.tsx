@@ -156,7 +156,8 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
 
             const maxY = d3.max(series, layer => d3.max(layer, d => d[1])) || 0;
             const minY = d3.min(series, layer => d3.min(layer, d => d[0])) || 0;
-            const maxExtent = Math.max(Math.abs(maxY), Math.abs(minY));
+            // Prevent domain [0, 0] which causes NaN in scaleLinear
+            const maxExtent = Math.max(Math.abs(maxY), Math.abs(minY)) || 1;
 
             const yScale = d3.scaleLinear()
                 .domain([-maxExtent, maxExtent])
