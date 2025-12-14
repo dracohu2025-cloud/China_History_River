@@ -391,5 +391,6 @@ export const getDynastyPower = (d: Dynasty, year: number): number => {
     if (d.id.startsWith('ten_')) weight = 55;
     if (d.id.startsWith('threekingdoms')) weight = 30;
 
-    return power * weight;
+    const result = power * weight;
+    return isNaN(result) ? 0 : result;
 };
