@@ -120,9 +120,10 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
         const worldX = xScale(centerYear);
         const startX = (width / 2) - (worldX * INITIAL_ZOOM);
 
-        // Vertically Align: Explicit Top Padding (32%)
-        // We place the first row's anchor (approx top) at 32% of screen height.
-        const startY = height * 0.32;
+        // Vertically Align: Explicit Top Padding (24%)
+        // We place the first row's anchor (approx top) at 24% of screen height.
+        // This targets a ~10-20px visual gap below the header.
+        const startY = height * 0.24;
 
         const initialTransform = d3.zoomIdentity.translate(startX, startY).scale(INITIAL_ZOOM);
 
