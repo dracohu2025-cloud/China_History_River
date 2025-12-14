@@ -114,13 +114,10 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
         const worldX = xScale(centerYear);
         const startX = (width / 2) - (worldX * INITIAL_ZOOM);
 
-        // Vertically center the rows
-        // We know the content occupies `orderedCountries.length * ROW_HEIGHT` in World Space.
-        // We want that block to be centered in Screen Space.
-        const totalWorldHeight = orderedCountries.length * ROW_HEIGHT;
-        const totalScreenHeight = totalWorldHeight * INITIAL_ZOOM;
-        // Pushing down by 28% of screen height to ensure China track clears the title
-        const startY = (height - totalScreenHeight) / 2 + (height * 0.28);
+        // Vertically Align: Explicit Top Padding
+        // Instead of centering, we place the first row (China) at a fixed percentage down the screen (25%)
+        // to guarantee it clears the Title/Header area regardless of screen aspect ratio.
+        const startY = height * 0.25;
 
         const initialTransform = d3.zoomIdentity.translate(startX, startY).scale(INITIAL_ZOOM);
 
