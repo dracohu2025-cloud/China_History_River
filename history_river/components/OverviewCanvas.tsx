@@ -517,7 +517,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                         );
                                     });
                                 })()}
-                                )}
+
 
                                 {/* Dynasty Labels */}
                                 <g pointerEvents="none">
