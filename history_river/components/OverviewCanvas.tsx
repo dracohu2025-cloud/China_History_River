@@ -63,7 +63,7 @@ const DATA_START_YEAR = -2500;
 const DATA_END_YEAR = 2025;
 const DATA_STEP = 5; // Use coarser step for overview to improve performance
 
-const INITIAL_ZOOM = 0.12;
+const INITIAL_ZOOM = 0.16;
 const MIN_ZOOM = 0.05;
 const MAX_ZOOM = 10;
 const EVENT_DOT_THRESHOLD = 0.1;
@@ -108,9 +108,8 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
     useEffect(() => {
         if (!containerRef.current) return;
 
-        // Horizontally center the timeline (midpoint of data)
-        // This ensures the "River" is in the middle, not skewed to the left
-        const centerYear = (DATA_START_YEAR + DATA_END_YEAR) / 2;
+        // Horizontally center the timeline (Focus on year 1100 AD for better initial view of major civilizations)
+        const centerYear = 1100;
         const worldX = xScale(centerYear);
         const startX = (width / 2) - (worldX * INITIAL_ZOOM);
 

@@ -131,11 +131,11 @@ const App: React.FC = () => {
       <div className="absolute top-0 left-0 w-full z-50 p-6 flex justify-between items-start pointer-events-none">
 
         {/* Title & Descr */}
-        <div className="pointer-events-auto bg-white/80 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-stone-200/50">
-          <h1 className="text-3xl font-bold text-stone-800 tracking-tight font-serif">
+        <div className={`pointer-events-auto bg-white/80 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-stone-200/50 flex ${i18n.language.startsWith('zh') ? 'flex-row items-baseline gap-4' : 'flex-col'}`}>
+          <h1 className="text-3xl font-bold text-stone-800 tracking-tight font-serif whitespace-nowrap">
             {t('app.title')}
           </h1>
-          <p className="text-sm text-stone-500 mt-1 font-medium">
+          <p className="text-sm text-stone-500 font-medium whitespace-nowrap">
             {t('app.subtitle')}
           </p>
         </div>
