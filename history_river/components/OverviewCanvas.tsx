@@ -105,40 +105,32 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
         .range([0, width * 5]), // Broad world width
         [width]);
 
+    // Zoom Behavior created once
+    const zoomBehavior = useMemo(() => d3.zoom<SVGSVGElement, unknown>()
+        .scaleExtent([MIN_ZOOM, MAX_ZOOM])
+        .on('zoom', (event) => setViewport(event.transform)),
+        [setViewport]);
+
     // Initialize Viewport to center interesting history
     useEffect(() => {
-        if (!containerRef.current) return;
+        if (!containerRef.current || !svgRef.current) return;
 
-        // Horizontally center the timeline (Focus on year 100 AD, shifting content right)
+        // Horizontally center the timeline (Focus on year 100 AD)
         const centerYear = 100;
         const worldX = xScale(centerYear);
         const startX = (width / 2) - (worldX * INITIAL_ZOOM);
 
-        // Vertically Align: Explicit Top Padding
-        // Instead of centering, we place the first row (China) at a fixed percentage down the screen (25%)
-        // to guarantee it clears the Title/Header area regardless of screen aspect ratio.
-        const startY = height * 0.25;
+        // Vertically Align: Explicit Top Padding (32%)
+        // We place the first row's anchor (approx top) at 32% of screen height.
+        const startY = height * 0.32;
 
         const initialTransform = d3.zoomIdentity.translate(startX, startY).scale(INITIAL_ZOOM);
 
-        // We need to sync D3 zoom state
+        // Apply to D3 immediately - this will trigger the 'zoom' event and update React state
         const svg = d3.select(svgRef.current);
-        // Explicitly set the transform on the zoom behavior immediately to prevent jumps
-        // We need to re-select the zoom behavior or just set it via the selection
-        // Note: The zoom behavior is attached in the other useEffect. 
-        // We should ideally merge these or rely on this one-time setter.
-        // Since the other one creates the zoom behavior, we can't call it here easily unless we recreate it or share it.
-        // But we DO set setViewport, which triggers the other effect to updates D3. 
-        // So just setting React state is enough for visual update, 
-        // BUT the D3 internal state needs to be synced if we want subsequent d3 events to be correct.
-        // The other effect handles `svg.call(zoom.transform, currentT)` when viewport changes.
-        // So we just need to setViewport here.
+        svg.call(zoomBehavior.transform, initialTransform);
 
-        setViewport({ x: startX, y: startY, k: INITIAL_ZOOM });
-    }, [width, height, xScale, setViewport, orderedCountries.length, ROW_HEIGHT]);
-    // Note: Dependencies strictly width/height to prevent loop? 
-    // Safe because we only want to reset on resize or init. 
-    // Ideally we shouldn't reset on resize if already zoomed.
+    }, [width, height, xScale, orderedCountries.length, ROW_HEIGHT, zoomBehavior]);
 
     // Calculate river data (Memoized)
     const riversData = useMemo(() => {
@@ -200,27 +192,16 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
         return gens;
     }, [xScale, riversData]);
 
-    // Zoom Behavior
+    // Bind Zoom Behavior
     useEffect(() => {
         const svg = d3.select(svgRef.current);
         if (!svg.node()) return;
 
-        const zoomed = (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
-            setViewport(event.transform);
-        };
+        // Bind the behavior
+        svg.call(zoomBehavior);
 
-        const zoom = d3.zoom<SVGSVGElement, unknown>()
-            .scaleExtent([MIN_ZOOM, MAX_ZOOM])
-            .on('zoom', zoomed);
-
-        svg.call(zoom);
-
-        // Set initial transform
-        // We do this to ensure D3 internal state matches our React state
-        const currentT = d3.zoomIdentity.translate(viewport.x, viewport.y).scale(viewport.k);
-        svg.call(zoom.transform, currentT);
-
-    }, [setViewport]); // Dependencies minimal to avoid re-binding
+        // Do NOT set initial transform here to 0,0 - let the layout effect handle it.
+    }, [zoomBehavior]);
 
     // Drag Behavior
     useEffect(() => {
