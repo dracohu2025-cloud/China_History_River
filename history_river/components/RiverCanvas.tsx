@@ -369,6 +369,14 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
     // Create new zoom behavior - D3 will manage transform
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.05, 50])
+      .filter((event) => {
+        // Allow wheel zooming anywhere
+        if (event.type === 'wheel') return true;
+        // Check for secondary buttons or ctrl key (standard D3 filter)
+        if (event.ctrlKey || event.button) return false;
+        // Ignore zoom on clickable elements to allow React onClick to fire
+        return !event.target.closest('.cursor-pointer');
+      })
       .on('zoom', (event) => {
         const { transform } = event;
         // Sync to React state for other components

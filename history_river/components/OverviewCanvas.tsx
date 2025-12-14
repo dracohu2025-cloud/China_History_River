@@ -108,6 +108,11 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
     // Zoom Behavior created once
     const zoomBehavior = useMemo(() => d3.zoom<SVGSVGElement, unknown>()
         .scaleExtent([MIN_ZOOM, MAX_ZOOM])
+        .filter((event) => {
+            if (event.type === 'wheel') return true;
+            if (event.ctrlKey || event.button) return false;
+            return !event.target.closest('.cursor-pointer');
+        })
         .on('zoom', (event) => setViewport(event.transform)),
         [setViewport]);
 
