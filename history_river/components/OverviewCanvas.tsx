@@ -308,15 +308,17 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
     }, [throttledMouseMove]);
 
     const getDynastyName = (d: Dynasty) => {
-        return i18n.language.startsWith('zh')
+        const lang = i18n.language || 'en';
+        return lang.startsWith('zh')
             ? (d.chineseName || t(`dynasties.${d.id}`, { defaultValue: d.name }))
             : (d.name || t(`dynasties.${d.id}`));
     };
 
     // Helper for event name
     const getEventTitle = (e: HistoricalEvent) => {
+        const lang = i18n.language || 'en';
         // Prefer zh title if language is zh, else en title, else fallback
-        return i18n.language.startsWith('zh')
+        return lang.startsWith('zh')
             ? (e.titleZh || e.title)
             : (e.titleEn || e.title);
     };
