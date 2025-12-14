@@ -386,54 +386,137 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
 
                                 {/* Historical Events Layer - Visibility controlled by zoom */}
                                 {viewport.k > EVENT_DOT_THRESHOLD && countryEvents && (
-                                    <g>
-                                        {countryEvents.map((event, i) => {
-                                            const x = xScale(event.year);
-                                            const y = 0; // Centered on track
+                                    {/* Historical Events Layer - Pin Style */ }
+                                {allEvents && allEvents[country] && (() => {
+                                    // Layout constraints for Overview Mode
+                                    const events = allEvents[country];
+                                    const availableHeightPerSide = ROW_HEIGHT / 2 - 10;
 
-                                            // Don't render if out of horizontal view (Optimization)
-                                            const screenX = x * viewport.k + viewport.x;
-                                            if (screenX < -50 || screenX > width + 50) return null;
+                                    // Filter events based on Zoom level, identical to RiverCanvas
+                                    const relevantEvents = events.filter(ev => {
+                                        if (ev.importance === 1) return true;
+                                        if (viewport.k <= 0.1) return false;
+                                        if (viewport.k < 0.3 && ev.importance > 1) return false;
+                                        if (viewport.k < 0.8 && ev.importance > 2) return false;
+                                        if (viewport.k < 2.0 && ev.importance > 3) return false;
+                                        if (viewport.k < 3.5 && ev.importance > 4) return false;
+                                        if (viewport.k < 6.0 && ev.importance > 5) return false;
+                                        return true;
+                                    });
 
-                                            const title = getEventTitle(event);
+                                    const sortedEvents = [...relevantEvents].sort((a, b) => {
+                                        if (a.importance !== b.importance) return a.importance - b.importance;
+                                        return a.year - b.year;
+                                    });
 
-                                            return (
-                                                <g
-                                                    key={`${event.year}-${i}`}
-                                                    transform={`translate(${x}, ${y})`}
-                                                    className="cursor-pointer hover:opacity-80"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        onEventSelect(event, event.year);
-                                                    }}
-                                                    onMouseDown={(e) => e.stopPropagation()}
-                                                >
-                                                    {/* Event Dot */}
-                                                    <circle
-                                                        r={4 / viewport.k}
+                                    // Simple layout algorithm (inline for now)
+                                    const occupiedLanes = new Map<number, { start: number, end: number }[]>();
+                                    const nodes: any[] = [];
+                                    const PADDING_X = 10;
+                                    const TOLERANCE = 5;
+
+                                    sortedEvents.forEach(ev => {
+                                        const worldX = xScale(ev.year); // Keep in world coordinates
+                                        const zoomScale = Math.min(1.2, Math.max(0.6, viewport.k));
+                                        // Font estimation
+                                        const title = getEventTitle(ev);
+                                        const textPixelWidth = (title.length * 10) + 25;
+                                        const textWorldWidth = textPixelWidth / viewport.k; // Width in world units
+
+                                        const startX = worldX - textWorldWidth / 2;
+                                        const endX = worldX + textWorldWidth / 2;
+
+                                        const bandIndex = Math.min(3, Math.max(1, ev.importance));
+                                        const primaryLane = (ev.year % 2 === 0 ? 1 : -1) * bandIndex;
+                                        const tryPlace = (laneVal: number) => {
+                                            const ranges = occupiedLanes.get(laneVal) || [];
+                                            // Check overlap in world space
+                                            const hasOverlap = ranges.some(r => !(endX < r.start - (TOLERANCE / viewport.k) || startX > r.end + (TOLERANCE / viewport.k)));
+                                            if (hasOverlap) return false;
+                                            ranges.push({ start: startX, end: endX });
+                                            occupiedLanes.set(laneVal, ranges);
+
+                                            // Calculate Y offset (World Space)
+                                            // In Overview, we need to be careful with vertical space.
+                                            // Lane height should be roughly 20-30px screen units.
+                                            const laneHeightWorld = 25 / viewport.k;
+                                            const yOffset = laneVal * laneHeightWorld;
+                                            // Clamp to row
+                                            if (Math.abs(yOffset) > availableHeightPerSide) return false; // Too far
+
+                                            nodes.push({ event: ev, x: worldX, yOffset, width: textWorldWidth, title });
+                                            return true;
+                                        };
+
+                                        if (!tryPlace(primaryLane)) {
+                                            tryPlace(-primaryLane);
+                                        }
+                                    });
+
+                                    return nodes.map((node, i) => {
+                                        // Don't render if out of horizontal view
+                                        const screenX = node.x * viewport.k + viewport.x;
+                                        if (screenX < -150 || screenX > width + 150) return null;
+
+                                        const renderScale = Math.min(1.2, Math.max(0.6, viewport.k));
+                                        const color = '#57534e'; // Use getEventColor logic if needed, simplify for now or copy
+
+                                        return (
+                                            <g
+                                                key={`${node.event.year}-${i}`}
+                                                transform={`translate(${node.x}, 0)`}
+                                                className="cursor-pointer hover:opacity-80"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onEventSelect(node.event, node.event.year);
+                                                }}
+                                                onMouseDown={(e) => e.stopPropagation()}
+                                            >
+                                                {/* Pin Circle at river center */}
+                                                <circle
+                                                    r={3 / viewport.k}
+                                                    fill="white"
+                                                    stroke={color}
+                                                    strokeWidth={1.5 / viewport.k}
+                                                />
+                                                {/* Connecting Line */}
+                                                <line
+                                                    x1={0} y1={0}
+                                                    x2={0} y2={node.yOffset}
+                                                    stroke={color}
+                                                    strokeWidth={1 / viewport.k}
+                                                    strokeDasharray={`${2 / viewport.k},${2 / viewport.k}`}
+                                                    opacity={0.6}
+                                                />
+                                                {/* Bubble Group */}
+                                                <g transform={`translate(0, ${node.yOffset})`}>
+                                                    <rect
+                                                        x={-node.width / 2}
+                                                        y={-10 / viewport.k}
+                                                        width={node.width}
+                                                        height={20 / viewport.k}
+                                                        rx={10 / viewport.k}
                                                         fill="white"
-                                                        stroke="#57534e"
-                                                        strokeWidth={1.5 / viewport.k}
+                                                        stroke={color}
+                                                        strokeWidth={1 / viewport.k}
+                                                        style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' }}
                                                     />
-
-                                                    {/* Event Label - Semantic Zoom */}
-                                                    {viewport.k > EVENT_LABEL_THRESHOLD && (
-                                                        <text
-                                                            y={-8 / viewport.k}
-                                                            fill="#44403c"
-                                                            fontSize={10 / viewport.k}
-                                                            fontWeight="bold"
-                                                            textAnchor="start"
-                                                            transform="rotate(-30)"
-                                                            style={{ textShadow: '0 1px 2px rgba(255,255,255,0.8)' }}
-                                                        >
-                                                            {title}
-                                                        </text>
-                                                    )}
+                                                    <text
+                                                        y={0}
+                                                        dy={4 / viewport.k} // Centering
+                                                        fill="#44403c"
+                                                        fontSize={10 / viewport.k}
+                                                        fontWeight="bold"
+                                                        textAnchor="middle"
+                                                        style={{ textShadow: 'none' }}
+                                                    >
+                                                        {node.title}
+                                                    </text>
                                                 </g>
-                                            )
-                                        })}
-                                    </g>
+                                            </g>
+                                        );
+                                    });
+                                })()}
                                 )}
 
                                 {/* Dynasty Labels */}
