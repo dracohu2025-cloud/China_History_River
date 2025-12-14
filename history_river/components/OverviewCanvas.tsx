@@ -475,7 +475,11 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                             if (screenX < -100 || screenX > width + 100) return;
 
                             const title = getEventTitle(ev);
-                            const textWidthPx = (title.length * 10) + 20; // Approx width
+                            // Optimization: Adjust width based on language (English chars are narrower)
+                            const isZh = i18n.language && i18n.language.startsWith('zh');
+                            const charWidth = isZh ? 11 : 7;
+                            const padding = isZh ? 20 : 16;
+                            const textWidthPx = (title.length * charWidth) + padding;
                             const startX = screenX - textWidthPx / 2;
                             const endX = screenX + textWidthPx / 2;
 
@@ -651,7 +655,32 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                         <g pointerEvents="none">
                             <line x1={cursorX} y1={0} x2={cursorX} y2={height} stroke="#ea580c" strokeWidth={1.5} strokeDasharray="4 4" opacity={0.6} />
                             <g transform={`translate(${cursorX}, 15)`}>
-                                {/* Calculated logic for year at cursor can go here if needed */}
+                                {(() => {
+                                    // Calculate year from cursorX
+                                    // available vars: cursorX, viewport, xScale, width
+                                    // screenX = worldX * k + x
+                                    // worldX = (screenX - x) / k
+                                    const worldX = (cursorX - viewport.x) / viewport.k;
+                                    const year = Math.round(xScale.invert(worldX));
+
+                                    // Clamp year to data range for sanity? optional.
+
+                                    return (
+                                        <text
+                                            y={12} // Below the top ruler
+                                            fill="#ea580c"
+                                            fontSize={12}
+                                            fontWeight="bold"
+                                            textAnchor={cursorX > width - 50 ? 'end' : (cursorX < 50 ? 'start' : 'middle')}
+                                            style={{
+                                                textShadow: '0 1px 2px rgba(255,255,255,0.9)',
+                                                pointerEvents: 'none'
+                                            }}
+                                        >
+                                            {year < 0 ? t('date_format.bc', { year: Math.abs(year) }) : t('date_format.ad', { year })}
+                                        </text>
+                                    );
+                                })()}
                             </g>
                         </g>
                     )
