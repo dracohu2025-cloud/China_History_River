@@ -344,8 +344,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
 
                 {/* 1. Main River Content: Scaled Uniformly (True 2D) */}
                 <g transform={`translate(${viewport.x}, ${viewport.y}) scale(${viewport.k})`}>
-                    {/* Grid Lines */}
-                    <line x1={xScale(-3000)} y1={0} x2={xScale(2050)} y2={0} stroke="#e5e5e5" strokeWidth={1 / viewport.k} vectorEffect="non-scaling-stroke" />
+
 
                     {orderedCountries.map((country, index) => {
                         const { series } = riversData[country];
