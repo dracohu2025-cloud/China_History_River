@@ -191,6 +191,7 @@ const PodcastPinComponent: React.FC<PodcastPinComponentProps> = ({
 
 const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height, dynasties, events }) => {
   const { t, i18n } = useTranslation();
+  const lang = i18n.language || 'en';
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef<d3.ZoomBehavior<Element, unknown> | null>(null);
@@ -522,13 +523,12 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
                   fontSize={24 / viewport.k}
                   textAnchor="middle"
                   alignmentBaseline="middle"
-                  className="font-title pointer-events-none"
                   style={{
                     textShadow: '0 1px 3px rgba(0,0,0,0.5)',
                     opacity: viewport.k > 0.2 ? 1 : 0.3 // 降低文字显示阈值，并添加半透明状态
                   }}
                 >
-                  {i18n.language.startsWith('zh') ? (dynasty.chineseName || t(`dynasties.${dynasty.id}`, { defaultValue: dynasty.name })) : (dynasty.name || t(`dynasties.${dynasty.id}`))}
+                  {lang.startsWith('zh') ? (dynasty.chineseName || t(`dynasties.${dynasty.id}`, { defaultValue: dynasty.name })) : (dynasty.name || t(`dynasties.${dynasty.id}`))}
                 </text>
               </g>
             );
@@ -574,12 +574,13 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
 
                     {/* 标题 - 字体缩小一半 */}
                     <text y={6} fill="#1f2937" fontSize={7} fontWeight={600} textAnchor="middle">
-                      {i18n.language.startsWith('en') ? 'PRC Founded' : '新中国成立'}
+                      {lang.startsWith('en') ? 'PRC Founded' : '新中国成立'}
                     </text>
                   </g>
                 </g>
               );
             })()}
+
           </g>
           {/* ===== END 1949年专属轨道 ===== */}
           {eventLayoutNodes.map((node) => {
@@ -673,7 +674,7 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
                     </tspan>
                     <tspan dx="6">
                       {/* Prioritize English check, default to Chinese/Native if not English */}
-                      {i18n.language.startsWith('en') ? (node.event.titleEn || node.event.title) : (node.event.titleZh || node.event.title)}
+                      {lang.startsWith('en') ? (node.event.titleEn || node.event.title) : (node.event.titleZh || node.event.title)}
                       {/* DEBUG: Show language to debug if it persists */}
                       {/* {` [${i18n.language}]`} */}
                     </tspan>
@@ -736,7 +737,7 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
           )}
         </g>
       </svg>
-    </div>
+    </div >
   );
 };
 

@@ -11,6 +11,7 @@ interface DetailModalProps {
 
 const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
   const { t, i18n } = useTranslation();
+  const lang = i18n.language || 'en';
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState<string>('');
 
@@ -18,9 +19,10 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
     if (!event) return;
 
     let isMounted = true;
+
     const loadDetails = async () => {
       setLoading(true);
-      const displayTitle = i18n.language.startsWith('en')
+      const displayTitle = lang.startsWith('en')
         ? (event.titleEn || event.title)
         : (event.titleZh || event.title);
       const context = `Historical Event: ${displayTitle} (Type: ${event.type})`;
@@ -53,15 +55,17 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
 
         {/* Header */}
         <div className="px-6 py-4 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
-          <h2 className="text-xl font-bold text-stone-800 font-serif tracking-tight">
-            {t('modal.details')}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 -mr-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-full transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-          </button>
+          <div className="flex justify-between items-start mb-4">
+            <h2 className="text-2xl font-bold text-stone-800 font-serif">
+              {lang.startsWith('zh') ? event.title : (event.titleEn || event.title)}
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-1 hover:bg-stone-100 rounded-full text-stone-400 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 18 18" /></svg>
+            </button>
+          </div>
         </div>
 
         {/* Content */}
