@@ -215,12 +215,31 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
         const svg = d3.select(svgRef.current);
 
         // Select all handle groups - use a specific class
-        const handles = svg.selectAll('.drag-handle-group');
+        const handles = svg.selectAll<SVGGElement, string>('.drag-handle-group');
+
+        // IMPORTANT: Because React renders these elements, they don't have D3 data bound by default.
+        // We must manually bind the country key to each element so 'd' is defined in drag events.
+        // We can assume the order matches orderedCountries or use a data attribute if we added one (we didn't yet).
+        // Better: we can rely on React's order if we restart the selection. 
+        // ACTUALLY, simpler is to add `data-country` attribute in render and read it here.
+        // OR, just read the text content? No.
+        // Best approach: Add data-country in render, read it here and set datum.
+        // But wait, the render function hasn't updated yet to add data-country.
+        // Let's modify this Effect to EXPECT data-country, and modify the Render to ADD it.
+        // Since we are doing a single replace, we can't do both easily if they are far apart.
+        // Let's check where the render is. It's around line 430.
+        // Plan:
+        // 1. Modify this effect to use index-based datum binding since handles are rendered in `COUNTRIES_LIST` order.
+
+        handles.datum((d, i) => orderedCountries[i] || COUNTRIES_LIST[i]);
 
         const drag = d3.drag<SVGGElement, string>()
             .on('start', (event, d) => {
                 // Prevent zoom during drag
                 if (event.sourceEvent) event.sourceEvent.stopPropagation();
+
+                // d should now be the country string
+                if (!d) return;
 
                 const index = orderedCountries.indexOf(d);
                 draggingRef.current = { country: d, offset: 0, startIndex: index };
@@ -260,7 +279,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
         // Clean up OLD drag handlers from previous renders would be tricky with D3 + React
         // Ideally we re-run this when orderedCountries changes? Yes.
 
-    }, [orderedCountries, height]); // Re-bind when list changes
+    }, [orderedCountries, height, COUNTRIES_LIST]); // Re-bind when list changes
 
     // State for cursor
     const [cursorX, setCursorX] = useState<number | null>(null);
