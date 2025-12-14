@@ -37,25 +37,38 @@ const App: React.FC = () => {
   const [events, setEvents] = useState<HistoricalEvent[]>(FALLBACK_EVENTS);
   const [pins, setPins] = useState<RiverPin[]>([]);
   const [allDynasties, setAllDynasties] = useState<{ [code: string]: Dynasty[] }>({});
+  const [allEvents, setAllEvents] = useState<{ [code: string]: HistoricalEvent[] }>({});
 
   useEffect(() => {
     const loadData = async () => {
       if (selectedCountry === 'overview') {
         const targetCountries = COUNTRIES.filter(c => c.code !== 'overview');
-        const promises = targetCountries.map(c => fetchDynasties(c.code));
-        const results = await Promise.all(promises);
+
+        // Parallel fetch for dynasties AND events
+        const dynastyPromises = targetCountries.map(c => fetchDynasties(c.code));
+        const eventPromises = targetCountries.map(c => fetchEvents(c.code));
+
+        const [dynastyResults, eventResults] = await Promise.all([
+          Promise.all(dynastyPromises),
+          Promise.all(eventPromises)
+        ]);
 
         const newAllDynasties: { [code: string]: Dynasty[] } = {};
+        const newAllEvents: { [code: string]: HistoricalEvent[] } = {};
+
         targetCountries.forEach((c, idx) => {
-          newAllDynasties[c.code] = results[idx];
+          newAllDynasties[c.code] = dynastyResults[idx];
+          newAllEvents[c.code] = eventResults[idx];
         });
+
         setAllDynasties(newAllDynasties);
+        setAllEvents(newAllEvents);
+
       } else {
         const [d, e] = await Promise.all([
           fetchDynasties(selectedCountry),
           fetchEvents(selectedCountry)
         ]);
-        // For China, we might have fallbacks. For others, allow empty.
         // For China, we might have fallbacks. For others, allow empty and CLEAR state if empty.
         if (d.length > 0) {
           setDynasties(d);
@@ -150,11 +163,8 @@ const App: React.FC = () => {
               onChange={(e) => setSelectedCountry(e.target.value)}
               className="appearance-none bg-white/80 backdrop-blur-md px-4 py-2 pr-8 rounded-xl shadow-sm border border-stone-200/50 text-stone-700 font-medium hover:bg-white transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-amber-500/20"
             >
-              <option value="overview">{t('countries.overview')}</option>
-              {COUNTRIES.filter(c => c.code !== 'overview').map(c => (
-                <option key={c.code} value={c.code}>
-                  {t(`countries.${c.code}`)}
-                </option>
+              {COUNTRIES.map(c => (
+                <option key={c.code} value={c.code}>{c.label}</option>
               ))}
             </select>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-stone-400">

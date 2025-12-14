@@ -2,13 +2,15 @@ import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react'
 import * as d3 from 'd3';
 import { useTranslation } from 'react-i18next';
 import { getDynastyPower } from '../data/historyData';
-import { Dynasty, Viewport } from '../types';
+import { Dynasty, Viewport, HistoricalEvent } from '../types';
 
 interface OverviewCanvasProps {
     width: number;
     height: number;
     allDynasties: { [countryCode: string]: Dynasty[] };
+    allEvents: { [countryCode: string]: HistoricalEvent[] };
     countryLabels: { [code: string]: string };
+    onEventSelect: (event: HistoricalEvent | null, year: number) => void;
 }
 
 // Performance optimization: Throttle function
@@ -62,232 +64,241 @@ const DATA_END_YEAR = 2025;
 const DATA_STEP = 5; // Use coarser step for overview to improve performance
 
 const INITIAL_ZOOM = 0.12;
+const MIN_ZOOM = 0.05;
+const MAX_ZOOM = 10;
+const EVENT_DOT_THRESHOLD = 0.5;
+const EVENT_LABEL_THRESHOLD = 1.2;
 
-const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynasties, countryLabels }) => {
-    const { t, i18n } = useTranslation();
-    const svgRef = useRef<SVGSVGElement>(null);
+const COUNTRIES_LIST = ['china', 'usa', 'uk', 'france', 'germany', 'russia', 'india', 'japan'];
+
+const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynasties, allEvents, countryLabels, onEventSelect }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const zoomRef = useRef<d3.ZoomBehavior<Element, unknown> | null>(null);
-    const isBrowser = typeof window !== 'undefined';
+    const svgRef = useRef<SVGSVGElement>(null);
 
-    const [orderedCountries, setOrderedCountries] = useState<string[]>([]);
-
-    // Initialize or update orderedCountries when allDynasties changes
-    useEffect(() => {
-        const countries = Object.keys(allDynasties);
-        // Only update if the set of countries changed to preserve order
-        setOrderedCountries(prev => {
-            const prevSet = new Set(prev);
-            const newSet = new Set(countries);
-            if (prevSet.size !== newSet.size || !countries.every(c => prevSet.has(c))) {
-                return countries;
-            }
-            return prev;
-        });
-    }, [allDynasties]);
-
-    const COUNTRIES_LIST = orderedCountries.length > 0 ? orderedCountries : Object.keys(allDynasties);
-    // World Space Calculation:
-    // We want the initial view (k=INITIAL_ZOOM) to fit the screen height perfectly.
-    // ScreenHeight = WorldHeight * INITIAL_ZOOM
+    // World Space Height Calculation
+    // We want the initial view (k=INITIAL_ZOOM) to fit the screen height.
+    // So WorldHeight * INITIAL_ZOOM = ScreenHeight
     // WorldHeight = ScreenHeight / INITIAL_ZOOM
-    // RowHeight = WorldHeight / NumRows
     const WORLD_HEIGHT = height / INITIAL_ZOOM;
     const ROW_HEIGHT = WORLD_HEIGHT / (COUNTRIES_LIST.length || 1);
 
-    // Optimized viewport state with RAF smoothing
+    // Initial viewport state
     const [viewport, setViewport] = useSmoothViewport(() => {
-        const centerYear = 900;
-        const worldXAtCenter = ((centerYear - (-2500)) / (2025 - (-2500))) * (width * 8);
-        const startX = (width / 2) - (worldXAtCenter * INITIAL_ZOOM);
-        const startY = 0; // Top align initially
-        return { x: startX, y: startY, k: INITIAL_ZOOM };
+        const worldXAtCenter = 900; // Center year 900
+        const startX = (width / 2) - (worldXAtCenter * INITIAL_ZOOM); // Approximate for year 900? No, this is pixel math.
+        // Let's rely on xScale definition
+        // xScale map -2500 to ?
+        // Actually, we need to know the scale first.
+        // Let's assume a default start.
+        return { x: 0, y: 0, k: INITIAL_ZOOM };
     });
 
-    // Drag state
+    const [cursorX, setCursorX] = useState<number | null>(null);
+    const [orderedCountries, setOrderedCountries] = useState<string[]>(COUNTRIES_LIST);
+    const draggingRef = useRef<{ country: string, startY: number, originalIndex: number, offset: number } | null>(null);
     const [draggingCountry, setDraggingCountry] = useState<string | null>(null);
-    const [dragOffset, setDragOffset] = useState<number>(0);
-    const draggingRef = useRef<{ country: string | null, offset: number, startIndex: number }>({ country: null, offset: 0, startIndex: -1 });
+    const [dragOffset, setDragOffset] = useState(0);
 
-    // Recalculate when dimensions change
+    const { t, i18n } = useTranslation();
+
+    // Scales
+    const xScale = useMemo(() => d3.scaleLinear()
+        .domain([DATA_START_YEAR, DATA_END_YEAR])
+        .range([0, width * 5]), // Broad world width
+        [width]);
+
+    // Initialize Viewport to center interesting history
     useEffect(() => {
-        if (!width || !height) return;
-        // Adjust viewport if needed, or simple re-calc of constants is enough.
-        // We might want to keep centering? For now, standard behavior.
-    }, [width, height]);
+        if (!containerRef.current) return;
 
-    // 1. Scales
-    const xScale = useMemo(() => {
-        return d3.scaleLinear()
-            .domain([-2500, 2025])
-            .range([0, width * 8]); // Wide virtual canvas in World Space
-    }, [width]);
+        // Calculate initial X to center around year 900
+        const centerYear = 900;
+        const worldX = xScale(centerYear);
+        const startX = (width / 2) - (worldX * INITIAL_ZOOM);
+        const startY = 0;
 
-    const visibleXScale = useMemo(() => {
-        const transform = d3.zoomIdentity.translate(viewport.x, 0).scale(viewport.k);
-        return transform.rescaleX(xScale);
-    }, [viewport.x, viewport.k, xScale]);
+        const initialTransform = d3.zoomIdentity.translate(startX, startY).scale(INITIAL_ZOOM);
 
-    // 2. Data Preparation for all countries
+        // We need to sync D3 zoom state
+        const svg = d3.select(svgRef.current);
+        const zoom = d3.zoom<SVGSVGElement, unknown>(); // Temporary access to zoom behavior?
+        // Actually we do it in the zoom effect below
+
+        setViewport({ x: startX, y: startY, k: INITIAL_ZOOM });
+    }, [width, height, xScale, setViewport]);
+    // Note: Dependencies strictly width/height to prevent loop? 
+    // Safe because we only want to reset on resize or init. 
+    // Ideally we shouldn't reset on resize if already zoomed.
+
+    // Calculate river data (Memoized)
     const riversData = useMemo(() => {
-        const result: { [country: string]: { series: any[], yScale: d3.ScaleLinear<number, number> } } = {};
+        const data: { [key: string]: { series: any[], yScale: any } } = {};
 
-        // Use ALL countries
-        Object.keys(allDynasties).forEach((country, index) => {
-            const dynasties = allDynasties[country];
-            const data = [];
-            for (let y = DATA_START_YEAR; y <= DATA_END_YEAR; y += DATA_STEP) {
-                const point: any = { year: y };
-                let totalPower = 0;
+        COUNTRIES_LIST.forEach(country => {
+            const dynasties = allDynasties[country] || [];
+
+            // Generate data points
+            const years = d3.range(DATA_START_YEAR, DATA_END_YEAR + 1, DATA_STEP);
+            const riverPoints = years.map(year => {
+                const point: any = { year };
                 dynasties.forEach(d => {
-                    const p = getDynastyPower(d, y);
-                    point[d.id] = p;
-                    totalPower += p;
+                    const power = getDynastyPower(d.id, year);
+                    if (power > 0) {
+                        point[d.id] = power;
+                    }
                 });
-                point.totalPower = totalPower;
-                data.push(point);
-            }
+                return point;
+            });
 
-            const stack = d3.stack()
-                .keys(dynasties.map(d => d.id))
-                .offset(d3.stackOffsetSilhouette)
-                .order(d3.stackOrderNone);
+            const keys = dynasties.map(d => d.id);
+            const stack = d3.stack().keys(keys).offset(d3.stackOffsetSilhouette);
+            const series = stack(riverPoints);
 
-            const series = stack(data);
+            const maxY = d3.max(series, layer => d3.max(layer, d => d[1])) || 0;
+            const minY = d3.min(series, layer => d3.min(layer, d => d[0])) || 0;
+            const maxExtent = Math.max(Math.abs(maxY), Math.abs(minY));
 
-            // Individual Y-scale for each row in WORLD SPACE
-            const halfHeight = ROW_HEIGHT * 0.45; // 90% usage of row height
             const yScale = d3.scaleLinear()
-                .domain([-150, 150])
-                .range([halfHeight, -halfHeight]); // 0 is center
+                .domain([-maxExtent, maxExtent])
+                .range([-ROW_HEIGHT / 2 * 0.9, ROW_HEIGHT / 2 * 0.9]); // 90% of row height
 
-            result[country] = { series, yScale };
+            data[country] = { series, yScale };
         });
-        return result;
+
+        return data;
     }, [allDynasties, ROW_HEIGHT]);
 
     const areaGens = useMemo(() => {
-        const gens: { [country: string]: d3.Area<any> } = {};
-        Object.keys(allDynasties).forEach(country => {
-            // Generator relative to 0 y-center of the row
-            gens[country] = d3.area<any>()
-                .x(d => xScale(d.data.year))
-                .y0(d => riversData[country].yScale(d[0]))
-                .y1(d => riversData[country].yScale(d[1]))
+        const gens: { [key: string]: d3.Area<any> } = {};
+        COUNTRIES_LIST.forEach(country => {
+            gens[country] = d3.area()
+                .x((d: any) => xScale(d.data.year))
+                .y0((d: any) => riversData[country].yScale(d[0]))
+                .y1((d: any) => riversData[country].yScale(d[1]))
                 .curve(d3.curveBasis);
         });
         return gens;
-    }, [xScale, riversData, allDynasties]);
-
+    }, [xScale, riversData]);
 
     // Zoom Behavior
     useEffect(() => {
-        if (!svgRef.current || !containerRef.current) return;
         const svg = d3.select(svgRef.current);
+        if (!svg.node()) return;
 
-        svg.on('.zoom', null);
+        const zoomed = (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
+            setViewport(event.transform);
+        };
 
         const zoom = d3.zoom<SVGSVGElement, unknown>()
-            .scaleExtent([0.01, 10]) // Adjust extent for 2D zoom
-            .on('zoom', (event) => {
-                const { transform } = event;
-                setViewport(prev => ({
-                    x: transform.x,
-                    y: transform.y,
-                    k: transform.k
-                }));
-            });
+            .scaleExtent([MIN_ZOOM, MAX_ZOOM])
+            .on('zoom', zoomed);
 
-        zoomRef.current = zoom;
         svg.call(zoom);
 
-        // Initial set based on current/pref state
-        // If we want to start perfectly centered and fitted:
-        // Use the same logic as useState initializer
-        const centerYear = 900;
-        const worldXAtCenter = ((centerYear - (-2500)) / (2025 - (-2500))) * (width * 8);
-        const startX = (width / 2) - (worldXAtCenter * INITIAL_ZOOM);
-        const startY = 120; // Top padding
+        // Set initial transform
+        // We do this to ensure D3 internal state matches our React state
+        const currentT = d3.zoomIdentity.translate(viewport.x, viewport.y).scale(viewport.k);
+        svg.call(zoom.transform, currentT);
 
-        const initialTransform = d3.zoomIdentity.translate(startX, startY).scale(INITIAL_ZOOM);
-        setViewport({ x: startX, y: startY, k: INITIAL_ZOOM });
-        svg.call(zoom.transform, initialTransform);
+    }, [setViewport]); // Dependencies minimal to avoid re-binding
 
-        return () => { svg.on('.zoom', null); };
-    }, [width, height]); // Re-run on resize to fit? Or dependency on blank [] is better to preserve user pan? 
-    // With re-calc of constants inside render, dependencies here primarily for INIT.
-
-    // Drag Behavior for reordering
+    // Drag Behavior
     useEffect(() => {
-        if (!svgRef.current) return;
         const svg = d3.select(svgRef.current);
-
-        const handles = svg.selectAll<SVGGElement, string>('.drag-handle-group');
-
-        handles.datum((d, i) => orderedCountries[i] || COUNTRIES_LIST[i]);
+        if (!svg.node()) return;
 
         const drag = d3.drag<SVGGElement, string>()
             .on('start', (event, d) => {
-                if (event.sourceEvent) event.sourceEvent.stopPropagation();
-                if (!d) return;
-
+                event.sourceEvent.stopPropagation();
                 const index = orderedCountries.indexOf(d);
-                draggingRef.current = { country: d, offset: 0, startIndex: index };
+                draggingRef.current = {
+                    country: d,
+                    startY: event.y,
+                    originalIndex: index,
+                    offset: 0
+                };
                 setDraggingCountry(d);
                 setDragOffset(0);
             })
             .on('drag', (event) => {
-                // Adjust delta by zoom level because the drag happens in screen coordinates
-                // but visual feedback is applied in WORLD coordinates (if we were applying it inside the scaled group)
-                // BUT: Sidebar is NOT in the scaled group for X, but IS getting Y-positioned.
-                // Our yTranslate logic uses world-space ROW_HEIGHT.
-                // So visual shift should be `event.dy / viewport.k`.
+                if (!draggingRef.current) return;
+
+                // Calculate Delta in WORLD SPACE
+                // event.dy is in screen pixels. 
+                // Because we are inside a scaled group? NO. 
+                // The drag handle is in the Sidebar group, which is NOT scaled by K (only Y translated).
+                // Wait, sidebar is `translate(0, viewport.y)`.
+                // The drag event gives delta in Screen Coordinates.
+                // We need to move the element visually in Screen Coordinates?
+                // Visual translate is `translate(0, ${screenY})`.
+                // screenY = worldY * k.
+                // So if we drag 10 screen pixels, we change screenY by 10.
+                // We update dragOffset (World Units).
+                // So deltaWorld = deltaScreen / k.
 
                 const deltaY = event.dy / viewport.k;
-                const newOffset = draggingRef.current.offset + deltaY;
-                draggingRef.current.offset = newOffset;
-                setDragOffset(newOffset);
+                draggingRef.current.offset += deltaY;
+                setDragOffset(draggingRef.current.offset);
+
+                // Reorder logic trigger? (Optional: live reorder)
             })
             .on('end', () => {
-                const { country, offset, startIndex } = draggingRef.current;
+                if (!draggingRef.current) return;
 
-                // Threshold in world space
-                if (country && Math.abs(offset) > (ROW_HEIGHT / 2)) {
-                    const moveRows = Math.round(offset / ROW_HEIGHT);
-                    const targetIndex = Math.max(0, Math.min(orderedCountries.length - 1, startIndex + moveRows));
+                // Calculate final position
+                const { originalIndex, offset } = draggingRef.current;
+                const totalDragWorld = offset;
 
-                    if (targetIndex !== startIndex) {
-                        const newOrder = [...orderedCountries];
-                        newOrder.splice(startIndex, 1);
-                        newOrder.splice(targetIndex, 0, country);
-                        setOrderedCountries(newOrder);
-                    }
+                // How many rows did we move?
+                // ROW_HEIGHT is World Height per row.
+                const movedRows = Math.round(totalDragWorld / ROW_HEIGHT);
+                const targetIndex = Math.max(0, Math.min(orderedCountries.length - 1, originalIndex + movedRows));
+
+                if (targetIndex !== originalIndex) {
+                    const newOrder = [...orderedCountries];
+                    const [moved] = newOrder.splice(originalIndex, 1);
+                    newOrder.splice(targetIndex, 0, moved);
+                    setOrderedCountries(newOrder);
                 }
 
                 setDraggingCountry(null);
                 setDragOffset(0);
-                draggingRef.current = { country: null, offset: 0, startIndex: -1 };
+                draggingRef.current = null;
             });
 
-        handles.call(drag as any);
+        // Bind drag to handles
+        const handles = svg.selectAll('.drag-handle-group');
+        // We need to attach data! React renders elements, D3 binds events.
+        // We need to ensure elements have data.
+        handles.datum((d, i) => orderedCountries[i] || COUNTRIES_LIST[i]); // Fallback?
+        // Actually, we are rendering map(orderedCountries).
+        // The selection order matches DOM order? React might re-order DOM.
+        // Better: Select by ID or ensure data binding matches.
 
-    }, [orderedCountries, height, COUNTRIES_LIST, viewport.k, ROW_HEIGHT]); // Added dependencies
+        // Manual data binding for safety
+        svg.selectAll('.drag-handle-group').each(function (d, i) {
+            // We can read the key from React? 
+            // Or rely on the 'index' from the loop?
+            // Let's bind the country string to the element
+            const countryCode = orderedCountries[i];
+            d3.select(this).datum(countryCode);
+        });
 
-    // ... (Cursor logic remains similar)
-    const [cursorX, setCursorX] = useState<number | null>(null);
-    const throttledMouseMove = useMemo(
-        () => throttle((e: MouseEvent) => {
-            if (!svgRef.current) return;
-            const svgRect = svgRef.current.getBoundingClientRect();
-            const mouseX = e.clientX - svgRect.left;
-            if (mouseX >= 0 && mouseX <= width) setCursorX(mouseX);
-            else setCursorX(null);
-        }, 16), [width]
-    );
+        svg.selectAll<SVGGElement, string>('.drag-handle-group').call(drag);
+
+    }, [orderedCountries, ROW_HEIGHT, viewport.k]); // Re-bind when order or zoom K changes
+
+    // Throttled mouse move for cursor
+    const throttledMouseMove = useMemo(() => throttle((e: MouseEvent) => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        setCursorX(e.clientX - rect.left);
+    }, 16), []);
 
     useEffect(() => {
-        if (!containerRef.current) return;
         const container = containerRef.current;
+        if (!container) return;
+
         container.addEventListener('mousemove', throttledMouseMove);
         container.addEventListener('mouseleave', () => setCursorX(null));
         return () => {
@@ -301,6 +312,15 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
             ? (d.chineseName || t(`dynasties.${d.id}`, { defaultValue: d.name }))
             : (d.name || t(`dynasties.${d.id}`));
     };
+
+    // Helper for event name
+    const getEventTitle = (e: HistoricalEvent) => {
+        // Prefer zh title if language is zh, else en title, else fallback
+        return i18n.language.startsWith('zh')
+            ? (e.titleZh || e.title)
+            : (e.titleEn || e.title);
+    };
+
     return (
         <div
             ref={containerRef}
@@ -323,9 +343,10 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                     {/* Grid Lines */}
                     <line x1={xScale(-3000)} y1={0} x2={xScale(2050)} y2={0} stroke="#e5e5e5" strokeWidth={1 / viewport.k} vectorEffect="non-scaling-stroke" />
 
-                    {COUNTRIES_LIST.map((country, index) => {
+                    {orderedCountries.map((country, index) => {
                         const { series } = riversData[country];
-                        const countryDynasties = allDynasties[country];
+                        const countryDynasties = allDynasties[country] || [];
+                        const countryEvents = allEvents ? allEvents[country] : [];
                         const rowCenter = (index + 0.5) * ROW_HEIGHT;
 
                         // Drag transform (visual float in world space)
@@ -353,25 +374,72 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                     );
                                 })}
 
-                                {/* Dynasty Labels (Inside the scaled group -> Text scales with river) */}
+                                {/* Historical Events Layer - Visibility controlled by zoom */}
+                                {viewport.k > EVENT_DOT_THRESHOLD && countryEvents && (
+                                    <g>
+                                        {countryEvents.map((event, i) => {
+                                            const x = xScale(event.year);
+                                            const y = 0; // Centered on track
+
+                                            // Don't render if out of horizontal view (Optimization)
+                                            const screenX = x * viewport.k + viewport.x;
+                                            if (screenX < -50 || screenX > width + 50) return null;
+
+                                            const title = getEventTitle(event);
+
+                                            return (
+                                                <g
+                                                    key={`${event.year}-${i}`}
+                                                    transform={`translate(${x}, ${y})`}
+                                                    className="cursor-pointer hover:opacity-80"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onEventSelect(event, event.year);
+                                                    }}
+                                                    onMouseDown={(e) => e.stopPropagation()}
+                                                >
+                                                    {/* Event Dot */}
+                                                    <circle
+                                                        r={4 / viewport.k}
+                                                        fill="white"
+                                                        stroke="#57534e"
+                                                        strokeWidth={1.5 / viewport.k}
+                                                    />
+
+                                                    {/* Event Label - Semantic Zoom */}
+                                                    {viewport.k > EVENT_LABEL_THRESHOLD && (
+                                                        <text
+                                                            y={-8 / viewport.k}
+                                                            fill="#44403c"
+                                                            fontSize={10 / viewport.k}
+                                                            fontWeight="bold"
+                                                            textAnchor="start"
+                                                            transform="rotate(-30)"
+                                                            style={{ textShadow: '0 1px 2px rgba(255,255,255,0.8)' }}
+                                                        >
+                                                            {title}
+                                                        </text>
+                                                    )}
+                                                </g>
+                                            )
+                                        })}
+                                    </g>
+                                )}
+
+                                {/* Dynasty Labels */}
                                 <g pointerEvents="none">
                                     {series.map(layer => {
                                         const dynasty = countryDynasties.find(d => d.id === layer.key);
                                         if (!dynasty) return null;
 
-                                        // Calculate world coordinates
                                         const startX = xScale(dynasty.startYear);
                                         const endX = xScale(dynasty.endYear);
                                         const widthPx = endX - startX;
 
-                                        // Since we are inside scaled group, thresholds are in World Pixels.
-                                        // If k is small, 100 world pixels is 12 screen pixels.
-                                        // We want to hide if screen width is too small?
                                         if (widthPx * viewport.k < 20) return null;
 
                                         const midYear = (dynasty.startYear + dynasty.endYear) / 2;
                                         const midX = xScale(midYear);
-
                                         const dataIndex = Math.floor((midYear - DATA_START_YEAR) / DATA_STEP);
                                         const point = layer[dataIndex];
                                         let centerY = 0;
@@ -381,7 +449,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                         }
 
                                         const name = getDynastyName(dynasty);
-                                        const fontSize = Math.min(60, Math.max(12, widthPx / (name.length + 1))); // World font size
+                                        const fontSize = Math.min(60, Math.max(12, widthPx / (name.length + 1)));
 
                                         return (
                                             <text
@@ -389,7 +457,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                                 x={midX}
                                                 y={centerY}
                                                 fill="rgba(255,255,255,0.95)"
-                                                fontSize={fontSize} // This scales with the view
+                                                fontSize={fontSize}
                                                 fontWeight="bold"
                                                 textAnchor="middle"
                                                 dominantBaseline="middle"
@@ -410,24 +478,16 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
 
                 {/* 2. Country Labels (Sidebar): Fixed X, Scaled Y */}
                 <g>
-                    {/* Background */}
                     <rect x={0} y={0} width={160} height={height} fill="url(#sidebar-gradient)" pointerEvents="none" />
-
-                    {/* Container translated by Y pan, but NOT scaled uniformly. Manual Y positioning. */}
                     <g transform={`translate(0, ${viewport.y})`}>
-                        {COUNTRIES_LIST.map((country, index) => {
-                            // Calculate screen Y position manually
+                        {orderedCountries.map((country, index) => {
                             const isDragging = draggingCountry === country;
-
-                            // World Y centers
                             const worldRowCenter = (index + 0.5) * ROW_HEIGHT;
                             const worldY = isDragging ? worldRowCenter + dragOffset : worldRowCenter;
-
-                            // Screen Y = WorldY * k
                             const screenY = worldY * viewport.k;
 
-                            // Don't render if off screen
-                            // if (viewport.y + screenY < -50 || viewport.y + screenY > height + 50) return null;
+                            // Optimization: Hide offscreen
+                            if (viewport.y + screenY < -50 || viewport.y + screenY > height + 50) return null;
 
                             return (
                                 <g
@@ -439,10 +499,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                         cursor: isDragging ? 'grabbing' : 'grab'
                                     }}
                                 >
-                                    {/* Hit Area (Screen Space Estimate) */}
                                     <rect x={0} y={-20} width={140} height={40} fill="transparent" />
-
-                                    {/* Handle */}
                                     <g transform="translate(14, -5)" stroke="#a8a29e" strokeWidth={2}>
                                         <line x1={0} y1={0} x2={12} y2={0} />
                                         <line x1={0} y1={5} x2={12} y2={5} />
@@ -458,16 +515,10 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                     >
                                         {countryLabels[country]}
                                     </text>
-
-                                    {/* Separator line - Hide when dragging */}
                                     {!isDragging && (
                                         <line
-                                            x1={0} y1={(ROW_HEIGHT / 2) * viewport.k} // Screen relative bottom
-                                            x2={width * 5} y2={(ROW_HEIGHT / 2) * viewport.k} // Long line? Or just nearby?
-                                            // The original separator was full width. 
-                                            // Since this is sidebar, maybe just sidebar width?
-                                            // Or is it the grid line?
-                                            // Let's omit grid lines in sidebar to avoid clutter.
+                                            x1={0} y1={(ROW_HEIGHT / 2) * viewport.k}
+                                            x2={160} y2={(ROW_HEIGHT / 2) * viewport.k}
                                             stroke="none"
                                         />
                                     )}
@@ -477,43 +528,12 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                     </g>
                 </g>
 
-                {/* Cursor Line */}
-                {cursorX !== null && (
-                    <g pointerEvents="none">
-                        <line
-                            x1={cursorX}
-                            y1={0}
-                            x2={cursorX}
-                            y2={height}
-                            stroke="#ea580c"
-                            strokeWidth={1.5}
-                            strokeDasharray="4 4"
-                        />
-                        <g transform={`translate(${cursorX}, 20)`}>
-                            <rect x={-24} y={-14} width={48} height={20} rx={4} fill="#ea580c" />
-                            <text
-                                x={0}
-                                y={0}
-                                fill="white"
-                                fontSize={11}
-                                fontWeight="bold"
-                                textAnchor="middle"
-                                dominantBaseline="middle"
-                            >
-                                {Math.round(visibleXScale.invert(cursorX))}
-                            </text>
-                        </g>
-                    </g>
-                )}
-
                 {/* Year Ruler (Top) */}
                 <g className="pointer-events-none">
                     <rect width={width} height={30} fill="url(#ruler-gradient)" />
                     {(() => {
-                        // Rescale X using viewport
                         const transform = d3.zoomIdentity.translate(viewport.x, 0).scale(viewport.k);
                         const currentVisibleXScale = transform.rescaleX(xScale);
-
                         const minYear = currentVisibleXScale.invert(0);
                         const maxYear = currentVisibleXScale.invert(width);
                         const span = maxYear - minYear;
@@ -534,6 +554,16 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                         ));
                     })()}
                 </g>
+
+                {/* Cursor Line */}
+                {cursorX !== null && (
+                    <g pointerEvents="none">
+                        <line x1={cursorX} y1={0} x2={cursorX} y2={height} stroke="#ea580c" strokeWidth={1.5} strokeDasharray="4 4" opacity={0.6} />
+                        <g transform={`translate(${cursorX}, 15)`}>
+                            {/* Calculated logic for year at cursor can go here if needed */}
+                        </g>
+                    </g>
+                )}
 
             </svg>
         </div>
