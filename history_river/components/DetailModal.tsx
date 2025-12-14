@@ -85,7 +85,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
           </div>
 
           <h3 className="text-2xl font-bold text-stone-900 mb-4 leading-snug">
-            {i18n.language.startsWith('zh') ? event.title : (event.titleEn || event.title)}
+            {lang.startsWith('zh') ? event.title : (event.titleEn || event.title)}
           </h3>
 
           <div className="prose prose-stone prose-sm max-w-none text-stone-600 leading-relaxed">
