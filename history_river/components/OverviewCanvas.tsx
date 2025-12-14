@@ -119,8 +119,8 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
         // We want that block to be centered in Screen Space.
         const totalWorldHeight = orderedCountries.length * ROW_HEIGHT;
         const totalScreenHeight = totalWorldHeight * INITIAL_ZOOM;
-        // Pushing down by 12% of screen height to clear header comfortably
-        const startY = (height - totalScreenHeight) / 2 + (height * 0.12);
+        // Pushing down by 20% of screen height to clear header more aggressively
+        const startY = (height - totalScreenHeight) / 2 + (height * 0.20);
 
         const initialTransform = d3.zoomIdentity.translate(startX, startY).scale(INITIAL_ZOOM);
 
