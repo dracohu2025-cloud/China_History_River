@@ -430,98 +430,227 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                     })}
                                 </g>
                             </g>
-                        )
-                    })}
-                </g>
 
-                {/* 2. Country Labels (Sidebar): Fixed X, Scaled Y */}
-                <g>
-                    <rect x={0} y={0} width={160} height={height} fill="url(#sidebar-gradient)" pointerEvents="none" />
-                    <g transform={`translate(0, ${viewport.y})`}>
-                        {orderedCountries.map((country, index) => {
-                            const isDragging = draggingCountry === country;
-                            const worldRowCenter = (index + 0.5) * ROW_HEIGHT;
-                            const worldY = isDragging ? worldRowCenter + dragOffset : worldRowCenter;
-                            const screenY = worldY * viewport.k;
+        {/* ===== SCREEN-SPACE EVENT OVERLAY LAYER ===== */ }
+                        <g>
+                            {orderedCountries.map((country, index) => {
+                                const events = allEvents ? allEvents[country] : null;
+                                if (!events) return null;
 
-                            // Optimization: Hide offscreen
-                            if (viewport.y + screenY < -50 || viewport.y + screenY > height + 50) return null;
+                                // 1. Filter events (Semantic Zoom)
+                                const relevantEvents = events.filter(ev => {
+                                    if (ev.importance === 1) return true;
+                                    if (viewport.k <= 0.1) return false;
+                                    if (viewport.k < 0.3 && ev.importance > 1) return false;
+                                    if (viewport.k < 0.8 && ev.importance > 2) return false;
+                                    if (viewport.k < 2.0 && ev.importance > 3) return false;
+                                    if (viewport.k < 3.5 && ev.importance > 4) return false;
+                                    if (viewport.k < 6.0 && ev.importance > 5) return false;
+                                    return true;
+                                });
 
-                            return (
-                                <g
-                                    key={`label-${country}`}
-                                    className="drag-handle-group"
-                                    transform={`translate(0, ${screenY})`}
-                                    style={{
-                                        transition: isDragging ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0, 0.2, 1)',
-                                        cursor: isDragging ? 'grabbing' : 'grab'
-                                    }}
-                                >
-                                    <rect x={0} y={-20} width={140} height={40} fill="transparent" />
-                                    <g transform="translate(14, -5)" stroke="#a8a29e" strokeWidth={2}>
-                                        <line x1={0} y1={0} x2={12} y2={0} />
-                                        <line x1={0} y1={5} x2={12} y2={5} />
-                                        <line x1={0} y1={10} x2={12} y2={10} />
+                                if (relevantEvents.length === 0) return null;
+
+                                const sortedEvents = [...relevantEvents].sort((a, b) => {
+                                    if (a.importance !== b.importance) return a.importance - b.importance;
+                                    return a.year - b.year;
+                                });
+
+                                // 2. Screen Space Layout
+                                const occupiedLanes = new Map<number, { start: number, end: number }[]>();
+                                const nodes: any[] = [];
+                                const LANE_HEIGHT_PX = 18; // Fixed pixel height for lanes
+                                const TOLERANCE_PX = 5;
+
+                                // Row Center in Screen Space
+                                const rowCenterY = ((index + 0.5) * ROW_HEIGHT) * viewport.k + viewport.y;
+
+                                sortedEvents.forEach(ev => {
+                                    const screenX = xScale(ev.year) * viewport.k + viewport.x;
+
+                                    // Optimization: visible bounds check
+                                    if (screenX < -100 || screenX > width + 100) return;
+
+                                    const title = getEventTitle(ev);
+                                    const textWidthPx = (title.length * 10) + 20; // Approx width
+                                    const startX = screenX - textWidthPx / 2;
+                                    const endX = screenX + textWidthPx / 2;
+
+                                    const bandIndex = Math.min(4, Math.max(1, ev.importance));
+                                    // Alternate up/down
+                                    const primaryLane = (ev.year % 2 === 0 ? 1 : -1) * bandIndex;
+
+                                    const tryPlace = (laneVal: number) => {
+                                        const ranges = occupiedLanes.get(laneVal) || [];
+                                        const hasOverlap = ranges.some(r => !(endX < r.start - TOLERANCE_PX || startX > r.end + TOLERANCE_PX));
+                                        if (hasOverlap) return false;
+
+                                        ranges.push({ start: startX, end: endX });
+                                        occupiedLanes.set(laneVal, ranges);
+
+                                        const yOffset = laneVal * LANE_HEIGHT_PX;
+                                        nodes.push({ event: ev, x: screenX, y: rowCenterY, yOffset, width: textWidthPx, title });
+                                        return true;
+                                    };
+
+                                    if (!tryPlace(primaryLane)) {
+                                        // Try opposite side
+                                        tryPlace(-primaryLane);
+                                    }
+                                });
+
+                                // 3. Render
+                                return (
+                                    <g key={country}>
+                                        {nodes.map((node, i) => {
+                                            const color = '#57534e';
+                                            return (
+                                                <g
+                                                    key={`${node.event.year}-${i}`}
+                                                    transform={`translate(${node.x}, ${node.y})`}
+                                                    className="cursor-pointer hover:opacity-80"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onEventSelect(node.event, node.event.year);
+                                                    }}
+                                                    onMouseDown={(e) => e.stopPropagation()}
+                                                >
+                                                    {/* Center Dot (on River) */}
+                                                    <circle
+                                                        r={3}
+                                                        fill="white"
+                                                        stroke={color}
+                                                        strokeWidth={1.5}
+                                                    />
+                                                    {/* Dotted Line */}
+                                                    <line
+                                                        x1={0} y1={0}
+                                                        x2={0} y2={node.yOffset}
+                                                        stroke={color}
+                                                        strokeWidth={1}
+                                                        strokeDasharray="2,2"
+                                                        opacity={0.6}
+                                                    />
+                                                    {/* Bubble */}
+                                                    <g transform={`translate(0, ${node.yOffset})`}>
+                                                        <rect
+                                                            x={-node.width / 2}
+                                                            y={-10}
+                                                            width={node.width}
+                                                            height={20}
+                                                            rx={10}
+                                                            fill="white"
+                                                            stroke={color}
+                                                            strokeWidth={1}
+                                                            style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' }}
+                                                        />
+                                                        <text
+                                                            y={0}
+                                                            dy={4}
+                                                            fill="#44403c"
+                                                            fontSize={10}
+                                                            fontWeight="bold"
+                                                            textAnchor="middle"
+                                                        >
+                                                            {node.title}
+                                                        </text>
+                                                    </g>
+                                                </g>
+                                            );
+                                        })}
                                     </g>
-                                    <text
-                                        x={40}
-                                        fill="#292524"
-                                        fontSize={14}
-                                        fontWeight="bold"
-                                        dominantBaseline="middle"
-                                        style={{ textShadow: '0 2px 4px rgba(255,255,255,0.9)', userSelect: 'none' }}
-                                    >
-                                        {countryLabels[country]}
-                                    </text>
-                                    {!isDragging && (
-                                        <line
-                                            x1={0} y1={(ROW_HEIGHT / 2) * viewport.k}
-                                            x2={160} y2={(ROW_HEIGHT / 2) * viewport.k}
-                                            stroke="none"
-                                        />
-                                    )}
+                                );
+                            })}
+                        </g>
+
+                        {/* 2. Country Labels (Sidebar): Fixed X, Scaled Y */ }
+                        <g>
+                            <rect x={0} y={0} width={160} height={height} fill="url(#sidebar-gradient)" pointerEvents="none" />
+                            <g transform={`translate(0, ${viewport.y})`}>
+                                {orderedCountries.map((country, index) => {
+                                    const worldY = isDragging ? worldRowCenter + dragOffset : worldRowCenter;
+                                    const screenY = worldY * viewport.k;
+
+                                    // Optimization: Hide offscreen
+                                    if (viewport.y + screenY < -50 || viewport.y + screenY > height + 50) return null;
+
+                                    return (
+                                        <g
+                                            key={`label-${country}`}
+                                            className="drag-handle-group"
+                                            transform={`translate(0, ${screenY})`}
+                                            style={{
+                                                transition: isDragging ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0, 0.2, 1)',
+                                                cursor: isDragging ? 'grabbing' : 'grab'
+                                            }}
+                                        >
+                                            <rect x={0} y={-20} width={140} height={40} fill="transparent" />
+                                            <g transform="translate(14, -5)" stroke="#a8a29e" strokeWidth={2}>
+                                                <line x1={0} y1={0} x2={12} y2={0} />
+                                                <line x1={0} y1={5} x2={12} y2={5} />
+                                                <line x1={0} y1={10} x2={12} y2={10} />
+                                            </g>
+                                            <text
+                                                x={40}
+                                                fill="#292524"
+                                                fontSize={14}
+                                                fontWeight="bold"
+                                                dominantBaseline="middle"
+                                                style={{ textShadow: '0 2px 4px rgba(255,255,255,0.9)', userSelect: 'none' }}
+                                            >
+                                                {countryLabels[country]}
+                                            </text>
+                                            {!isDragging && (
+                                                <line
+                                                    x1={0} y1={(ROW_HEIGHT / 2) * viewport.k}
+                                                    x2={160} y2={(ROW_HEIGHT / 2) * viewport.k}
+                                                    stroke="none"
+                                                />
+                                            )}
+                                        </g>
+                                    )
+                                })}
+                            </g>
+                        </g>
+
+                        {/* Year Ruler (Top) */ }
+                        <g className="pointer-events-none">
+                            <rect width={width} height={30} fill="url(#ruler-gradient)" />
+                            {(() => {
+                                const transform = d3.zoomIdentity.translate(viewport.x, 0).scale(viewport.k);
+                                const currentVisibleXScale = transform.rescaleX(xScale);
+                                const minYear = currentVisibleXScale.invert(0);
+                                const maxYear = currentVisibleXScale.invert(width);
+                                const span = maxYear - minYear;
+                                let step = 1;
+                                if (span > 800) step = 100; else if (span > 300) step = 50; else if (span > 120) step = 10; else step = 5;
+
+                                const startTick = Math.floor(minYear / step) * step;
+                                const endTick = Math.ceil(maxYear / step) * step;
+                                const ticks = d3.range(startTick, endTick + step, step);
+
+                                return ticks.map(year => (
+                                    <g key={year} transform={`translate(${currentVisibleXScale(year)}, 0)`}>
+                                        <line y2={10} stroke="#a8a29e" strokeWidth={1} />
+                                        <text y={22} fill="#57534e" fontSize={10} textAnchor="middle">
+                                            {year < 0 ? t('date_format.bc', { year: Math.abs(year) }) : t('date_format.ad', { year })}
+                                        </text>
+                                    </g>
+                                ));
+                            })()}
+                        </g>
+
+                        {/* Cursor Line */ }
+                        {
+                            cursorX !== null && (
+                                <g pointerEvents="none">
+                                    <line x1={cursorX} y1={0} x2={cursorX} y2={height} stroke="#ea580c" strokeWidth={1.5} strokeDasharray="4 4" opacity={0.6} />
+                                    <g transform={`translate(${cursorX}, 15)`}>
+                                        {/* Calculated logic for year at cursor can go here if needed */}
+                                    </g>
                                 </g>
                             )
-                        })}
-                    </g>
-                </g>
-
-                {/* Year Ruler (Top) */}
-                <g className="pointer-events-none">
-                    <rect width={width} height={30} fill="url(#ruler-gradient)" />
-                    {(() => {
-                        const transform = d3.zoomIdentity.translate(viewport.x, 0).scale(viewport.k);
-                        const currentVisibleXScale = transform.rescaleX(xScale);
-                        const minYear = currentVisibleXScale.invert(0);
-                        const maxYear = currentVisibleXScale.invert(width);
-                        const span = maxYear - minYear;
-                        let step = 1;
-                        if (span > 800) step = 100; else if (span > 300) step = 50; else if (span > 120) step = 10; else step = 5;
-
-                        const startTick = Math.floor(minYear / step) * step;
-                        const endTick = Math.ceil(maxYear / step) * step;
-                        const ticks = d3.range(startTick, endTick + step, step);
-
-                        return ticks.map(year => (
-                            <g key={year} transform={`translate(${currentVisibleXScale(year)}, 0)`}>
-                                <line y2={10} stroke="#a8a29e" strokeWidth={1} />
-                                <text y={22} fill="#57534e" fontSize={10} textAnchor="middle">
-                                    {year < 0 ? t('date_format.bc', { year: Math.abs(year) }) : t('date_format.ad', { year })}
-                                </text>
-                            </g>
-                        ));
-                    })()}
-                </g>
-
-                {/* Cursor Line */}
-                {cursorX !== null && (
-                    <g pointerEvents="none">
-                        <line x1={cursorX} y1={0} x2={cursorX} y2={height} stroke="#ea580c" strokeWidth={1.5} strokeDasharray="4 4" opacity={0.6} />
-                        <g transform={`translate(${cursorX}, 15)`}>
-                            {/* Calculated logic for year at cursor can go here if needed */}
-                        </g>
-                    </g>
-                )}
+                        }
 
             </svg>
         </div>
