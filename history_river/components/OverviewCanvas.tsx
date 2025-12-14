@@ -108,21 +108,36 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
     useEffect(() => {
         if (!containerRef.current) return;
 
-        // Calculate initial X to center around year 900
-        const centerYear = 900;
+        // Horizontally center the timeline (midpoint of data)
+        // This ensures the "River" is in the middle, not skewed to the left
+        const centerYear = (DATA_START_YEAR + DATA_END_YEAR) / 2;
         const worldX = xScale(centerYear);
         const startX = (width / 2) - (worldX * INITIAL_ZOOM);
-        const startY = 0;
+
+        // Vertically center the rows
+        // We know the content occupies `orderedCountries.length * ROW_HEIGHT` in World Space.
+        // We want that block to be centered in Screen Space.
+        const totalWorldHeight = orderedCountries.length * ROW_HEIGHT;
+        const totalScreenHeight = totalWorldHeight * INITIAL_ZOOM;
+        const startY = (height - totalScreenHeight) / 2;
 
         const initialTransform = d3.zoomIdentity.translate(startX, startY).scale(INITIAL_ZOOM);
 
         // We need to sync D3 zoom state
         const svg = d3.select(svgRef.current);
-        const zoom = d3.zoom<SVGSVGElement, unknown>(); // Temporary access to zoom behavior?
-        // Actually we do it in the zoom effect below
+        // Explicitly set the transform on the zoom behavior immediately to prevent jumps
+        // We need to re-select the zoom behavior or just set it via the selection
+        // Note: The zoom behavior is attached in the other useEffect. 
+        // We should ideally merge these or rely on this one-time setter.
+        // Since the other one creates the zoom behavior, we can't call it here easily unless we recreate it or share it.
+        // But we DO set setViewport, which triggers the other effect to updates D3. 
+        // So just setting React state is enough for visual update, 
+        // BUT the D3 internal state needs to be synced if we want subsequent d3 events to be correct.
+        // The other effect handles `svg.call(zoom.transform, currentT)` when viewport changes.
+        // So we just need to setViewport here.
 
         setViewport({ x: startX, y: startY, k: INITIAL_ZOOM });
-    }, [width, height, xScale, setViewport]);
+    }, [width, height, xScale, setViewport, orderedCountries.length, ROW_HEIGHT]);
     // Note: Dependencies strictly width/height to prevent loop? 
     // Safe because we only want to reset on resize or init. 
     // Ideally we shouldn't reset on resize if already zoomed.
