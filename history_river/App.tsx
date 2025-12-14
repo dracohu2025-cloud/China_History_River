@@ -61,8 +61,6 @@ const App: React.FC = () => {
           newAllEvents[c.code] = eventResults[idx];
         });
 
-        console.log('[App] Loaded events for overview:', Object.keys(newAllEvents).map(k => `${k}: ${newAllEvents[k]?.length}`));
-
         setAllDynasties(newAllDynasties);
         setAllEvents(newAllEvents);
 
@@ -210,7 +208,9 @@ const App: React.FC = () => {
             width={dimensions.width}
             height={dimensions.height}
             allDynasties={allDynasties}
+            allEvents={allEvents}
             countryLabels={COUNTRIES.reduce((acc, c) => ({ ...acc, [c.code]: t(`countries.${c.code}`) }), {})}
+            onEventSelect={handleEventSelect}
           />
         ) : (
           <RiverCanvas

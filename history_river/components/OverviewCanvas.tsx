@@ -357,9 +357,6 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                         const { series } = riversData[country];
                         const countryDynasties = allDynasties[country] || [];
                         const countryEvents = allEvents ? allEvents[country] : [];
-                        if (index === 0) { // Only log for the first country to avoid spam
-                            console.log(`[Overview] Country: ${country}, Events: ${countryEvents?.length}, Zoom: ${viewport.k}, Threshold: ${EVENT_DOT_THRESHOLD}`);
-                        }
                         const rowCenter = (index + 0.5) * ROW_HEIGHT;
 
                         // Drag transform (visual float in world space)
