@@ -108,8 +108,8 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
     useEffect(() => {
         if (!containerRef.current) return;
 
-        // Horizontally center the timeline (Focus on year 1100 AD for better initial view of major civilizations)
-        const centerYear = 1100;
+        // Horizontally center the timeline (Focus on year 300 AD to balance early vs late history)
+        const centerYear = 300;
         const worldX = xScale(centerYear);
         const startX = (width / 2) - (worldX * INITIAL_ZOOM);
 
@@ -118,7 +118,8 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
         // We want that block to be centered in Screen Space.
         const totalWorldHeight = orderedCountries.length * ROW_HEIGHT;
         const totalScreenHeight = totalWorldHeight * INITIAL_ZOOM;
-        const startY = (height - totalScreenHeight) / 2;
+        // Add explicit visually pleasing offset (push down by 8% of screen) to account for header
+        const startY = (height - totalScreenHeight) / 2 + (height * 0.08);
 
         const initialTransform = d3.zoomIdentity.translate(startX, startY).scale(INITIAL_ZOOM);
 
