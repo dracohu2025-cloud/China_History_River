@@ -348,6 +348,7 @@ export const KEY_EVENTS: HistoricalEvent[] = [
 ];
 
 export const getDynastyPower = (d: Dynasty, year: number): number => {
+    if (!d || !d.id) return 0;
     // Use a slight overlap to prevent zero-width gaps at transition years
     const overlap = 5;
     const extendedStart = d.startYear - overlap;
