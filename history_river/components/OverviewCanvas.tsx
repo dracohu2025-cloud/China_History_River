@@ -80,16 +80,13 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
     // So WorldHeight * INITIAL_ZOOM = ScreenHeight
     // WorldHeight = ScreenHeight / INITIAL_ZOOM
     const WORLD_HEIGHT = height / INITIAL_ZOOM;
-    const ROW_HEIGHT = WORLD_HEIGHT / (COUNTRIES_LIST.length || 1);
+    // COMPRESSION: Reduce row height spacing to 60% of original, to compact the view
+    // But we will inversely scale the river drawing to keep it the same visual size
+    const ROW_COMPRESSION = 0.65;
+    const ROW_HEIGHT = (WORLD_HEIGHT / (COUNTRIES_LIST.length || 1)) * ROW_COMPRESSION;
 
     // Initial viewport state
     const [viewport, setViewport] = useSmoothViewport(() => {
-        const worldXAtCenter = 900; // Center year 900
-        const startX = (width / 2) - (worldXAtCenter * INITIAL_ZOOM); // Approximate for year 900? No, this is pixel math.
-        // Let's rely on xScale definition
-        // xScale map -2500 to ?
-        // Actually, we need to know the scale first.
-        // Let's assume a default start.
         return { x: 0, y: 0, k: INITIAL_ZOOM };
     });
 
@@ -166,9 +163,11 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
 
         // Second pass: Create scales
         COUNTRIES_LIST.forEach(country => {
+            // Restore visual height by dividing by compression ratio
+            const visualRowHeight = ROW_HEIGHT / ROW_COMPRESSION;
             const yScale = d3.scaleLinear()
                 .domain([-maxExtent, maxExtent])
-                .range([-ROW_HEIGHT / 2 * 0.9, ROW_HEIGHT / 2 * 0.9]);
+                .range([-visualRowHeight / 2 * 0.9, visualRowHeight / 2 * 0.9]);
 
             data[country] = { series: countrySeries[country], yScale };
         });
