@@ -247,30 +247,41 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                     {/* Render Rivers Group (X + K transform) */}
                     <g transform={`translate(${viewport.x}, 0) scale(${viewport.k}, 1)`}>
                         {/* Grid Lines */}
+                        {/* Grid Lines */}
                         <line x1={xScale(-3000)} y1={0} x2={xScale(2050)} y2={0} stroke="#e5e5e5" strokeWidth={1} vectorEffect="non-scaling-stroke" />
 
-                        {COUNTRIES.map((country) => {
-                            const { series } = riversData[country];
-                            const countryDynasties = allDynasties[country];
+                        {(() => {
+                            // Dynamic height scaling: Thinner tracks when zoomed out
+                            const heightScale = Math.min(1, Math.max(0.1, viewport.k / 0.12));
 
-                            return (
-                                <g key={country}>
-                                    {series.map(layer => {
-                                        const dynasty = countryDynasties.find(d => d.id === layer.key);
-                                        if (!dynasty) return null;
-                                        return (
-                                            <g key={layer.key}>
-                                                <path
-                                                    d={areaGens[country](layer as any) || ''}
-                                                    fill={dynasty.color}
-                                                    opacity={0.85}
-                                                />
-                                            </g>
-                                        );
-                                    })}
-                                </g>
-                            )
-                        })}
+                            return COUNTRIES.map((country, index) => {
+                                const { series } = riversData[country];
+                                const countryDynasties = allDynasties[country];
+                                const rowCenter = (index + 0.5) * ROW_HEIGHT;
+
+                                return (
+                                    <g
+                                        key={country}
+                                        style={{ transition: 'transform 0.1s' }}
+                                        transform={`translate(0, ${rowCenter}) scale(1, ${heightScale}) translate(0, ${-rowCenter})`}
+                                    >
+                                        {series.map(layer => {
+                                            const dynasty = countryDynasties.find(d => d.id === layer.key);
+                                            if (!dynasty) return null;
+                                            return (
+                                                <g key={layer.key}>
+                                                    <path
+                                                        d={areaGens[country](layer as any) || ''}
+                                                        fill={dynasty.color}
+                                                        opacity={0.85}
+                                                    />
+                                                </g>
+                                            );
+                                        })}
+                                    </g>
+                                )
+                            });
+                        })()}
                     </g>
 
                     {/* Dynasty Labels Layer - Separate to avoid distortion */}
