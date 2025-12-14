@@ -119,8 +119,8 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
         // We want that block to be centered in Screen Space.
         const totalWorldHeight = orderedCountries.length * ROW_HEIGHT;
         const totalScreenHeight = totalWorldHeight * INITIAL_ZOOM;
-        // Pushing down by 20% of screen height to clear header more aggressively
-        const startY = (height - totalScreenHeight) / 2 + (height * 0.20);
+        // Pushing down by 28% of screen height to ensure China track clears the title
+        const startY = (height - totalScreenHeight) / 2 + (height * 0.28);
 
         const initialTransform = d3.zoomIdentity.translate(startX, startY).scale(INITIAL_ZOOM);
 
