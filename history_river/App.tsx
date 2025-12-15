@@ -42,8 +42,13 @@ const App: React.FC = () => {
   const [pins, setPins] = useState<RiverPin[]>([]);
   const [allDynasties, setAllDynasties] = useState<{ [code: string]: Dynasty[] }>({});
   const [allEvents, setAllEvents] = useState<{ [code: string]: HistoricalEvent[] }>({});
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    console.log('App: Mounted, Version: 2025-12-14-FIXED-ZOOM-OFFICIAL');
+    setMounted(true);
+
+    // Check if we have history state (returning from 3D view?)
     const loadData = async () => {
       if (selectedCountry === 'overview') {
         const targetCountries = COUNTRIES.filter(c => c.code !== 'overview');

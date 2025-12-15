@@ -195,6 +195,7 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef<d3.ZoomBehavior<Element, unknown> | null>(null);
+  const zoomRectRef = useRef<SVGRectElement>(null);
   const isBrowser = typeof window !== 'undefined';
 
   // Optimized viewport state with RAF smoothing
@@ -357,44 +358,12 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
   // Use D3's zoom behavior for smooth panning and zooming
   // FIXED: Let D3 fully control transform, only sync to React state
   useEffect(() => {
-    if (!svgRef.current || !containerRef.current) return;
+    if (!zoomRectRef.current) return;
 
-    const svg = d3.select(svgRef.current);
-    const container = d3.select(containerRef.current);
-
-    // Remove any existing zoom behavior
-    svg.on('.zoom', null);
-    container.on('.zoom', null);
-
-    // Create new zoom behavior - D3 will manage transform
-    const zoom = d3.zoom<SVGSVGElement, unknown>()
+    const zoom = d3.zoom<SVGRectElement, unknown>()
       .scaleExtent([0.05, 50])
-      .filter((event) => {
-        // Allow wheel zooming anywhere
-        if (event.type === 'wheel') return true;
-
-        // Check if event is mousedown/pointerdown to log
-        if (event.type === 'mousedown' || event.type === 'pointerdown') {
-          const target = event.target as Element;
-          console.log('RiverCanvas: Zoom Filter Check', event.type, target.tagName, target.className);
-
-          // Check for interactive attribute
-          const interactiveNode = target.closest('[data-interactive="true"]');
-          if (interactiveNode) {
-            console.log('RiverCanvas: Zoom BLOCKED (Interactive Element)');
-            return false;
-          }
-        }
-
-        // Check for secondary buttons or ctrl key (standard D3 filter)
-        if (event.ctrlKey || event.button) return false;
-
-        // Fallback check for cursor-pointer class
-        const target = event.target as Element;
-        if (target.closest && target.closest('.cursor-pointer')) return false;
-
-        return true;
-      })
+      // Refactored: No complex filter needed. Events are on top and will capture clicks.
+      // Zoom is attached to the background rect.
       .on('zoom', (event) => {
         const { transform } = event;
         // Sync to React state for other components
@@ -405,18 +374,18 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
         });
       });
 
-    zoomRef.current = zoom;
-    svg.call(zoom);
+    const zoomRect = d3.select(zoomRectRef.current);
+    zoomRect.call(zoom);
 
     // Set initial transform
     const initialTransform = d3.zoomIdentity
       .translate(viewport.x, viewport.y)
       .scale(viewport.k);
 
-    svg.call(zoom.transform, initialTransform);
+    zoomRect.call(zoom.transform, initialTransform);
 
     return () => {
-      svg.on('.zoom', null);
+      zoomRect.on('.zoom', null);
     };
   }, []); // Run once on mount, never re-run
 
@@ -516,8 +485,17 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
           </linearGradient>
         </defs>
 
+        {/* 0. Zoom Interaction Layer (Bottom) */}
+        <rect
+          ref={zoomRectRef}
+          width={width}
+          height={height}
+          fill="transparent"
+          style={{ cursor: 'grab', pointerEvents: 'all' }}
+        />
+
         {/* TRANSFORMED GROUP for River */}
-        <g transform={`translate(${viewport.x}, ${viewport.y}) scale(${viewport.k})`}>
+        <g transform={`translate(${viewport.x}, ${viewport.y}) scale(${viewport.k})`} style={{ pointerEvents: 'none' }}>
           <line
             x1={xScale(-3000)}
             y1={height / 2}

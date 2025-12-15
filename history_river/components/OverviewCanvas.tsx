@@ -92,6 +92,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
     });
 
     const [cursorX, setCursorX] = useState<number | null>(null);
+    const zoomRectRef = useRef<SVGRectElement>(null);
     const [orderedCountries, setOrderedCountries] = useState<string[]>(COUNTRIES_LIST);
     const draggingRef = useRef<{ country: string, startY: number, originalIndex: number, offset: number } | null>(null);
     const [draggingCountry, setDraggingCountry] = useState<string | null>(null);
@@ -106,19 +107,15 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
         [width]);
 
     // Zoom Behavior created once
-    const zoomBehavior = useMemo(() => d3.zoom<SVGSVGElement, unknown>()
+    const zoomBehavior = useMemo(() => d3.zoom<SVGRectElement, unknown>()
         .scaleExtent([MIN_ZOOM, MAX_ZOOM])
-        .filter((event) => {
-            if (event.type === 'wheel') return true;
-            if (event.ctrlKey || event.button) return false;
-            return !event.target.closest('.cursor-pointer');
-        })
+        // Simplified: No filter needed with background rect strategy
         .on('zoom', (event) => setViewport(event.transform)),
         [setViewport]);
 
     // Initialize Viewport to center interesting history
     useEffect(() => {
-        if (!containerRef.current || !svgRef.current) return;
+        if (!zoomRectRef.current) return;
 
         // Horizontally center the timeline (Focus on year 100 AD)
         const centerYear = 100;
@@ -133,8 +130,8 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
         const initialTransform = d3.zoomIdentity.translate(startX, startY).scale(INITIAL_ZOOM);
 
         // Apply to D3 immediately - this will trigger the 'zoom' event and update React state
-        const svg = d3.select(svgRef.current);
-        svg.call(zoomBehavior.transform, initialTransform);
+        const zoomRect = d3.select(zoomRectRef.current);
+        zoomRect.call(zoomBehavior.transform, initialTransform);
 
     }, [width, height, xScale, orderedCountries.length, ROW_HEIGHT, zoomBehavior]);
 
@@ -200,13 +197,12 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
 
     // Bind Zoom Behavior
     useEffect(() => {
-        const svg = d3.select(svgRef.current);
-        if (!svg.node()) return;
+        if (!zoomRectRef.current) return;
+        const zoomRect = d3.select(zoomRectRef.current);
 
         // Bind the behavior
-        svg.call(zoomBehavior);
+        zoomRect.call(zoomBehavior);
 
-        // Do NOT set initial transform here to 0,0 - let the layout effect handle it.
     }, [zoomBehavior]);
 
     // Drag Behavior
@@ -347,8 +343,17 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                     </linearGradient>
                 </defs>
 
+                {/* 0. Zoom Interaction Layer (Bottom) */}
+                <rect
+                    ref={zoomRectRef}
+                    width={width}
+                    height={height}
+                    fill="transparent"
+                    style={{ cursor: 'grab', pointerEvents: 'all' }}
+                />
+
                 {/* 1. Main River Content: Scaled Uniformly (True 2D) */}
-                <g transform={`translate(${viewport.x}, ${viewport.y}) scale(${viewport.k})`}>
+                <g transform={`translate(${viewport.x}, ${viewport.y}) scale(${viewport.k})`} style={{ pointerEvents: 'none' }}>
 
 
                     {orderedCountries.map((country, index) => {
