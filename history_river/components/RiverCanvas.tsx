@@ -372,17 +372,27 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
       .filter((event) => {
         // Allow wheel zooming anywhere
         if (event.type === 'wheel') return true;
+
+        // Check if event is mousedown/pointerdown to log
+        if (event.type === 'mousedown' || event.type === 'pointerdown') {
+          const target = event.target as Element;
+          console.log('RiverCanvas: Zoom Filter Check', event.type, target.tagName, target.className);
+
+          // Check for interactive attribute
+          const interactiveNode = target.closest('[data-interactive="true"]');
+          if (interactiveNode) {
+            console.log('RiverCanvas: Zoom BLOCKED (Interactive Element)');
+            return false;
+          }
+        }
+
         // Check for secondary buttons or ctrl key (standard D3 filter)
         if (event.ctrlKey || event.button) return false;
 
-        // Ignore zoom on clickable elements to allow React onClick to fire
-        // Added safety check for target.closest
+        // Fallback check for cursor-pointer class
         const target = event.target as Element;
-        const isClickable = target && target.closest && target.closest('.cursor-pointer');
-        if (isClickable) {
-          console.log('RiverCanvas: Zoom filtered on clickable element');
-          return false;
-        }
+        if (target.closest && target.closest('.cursor-pointer')) return false;
+
         return true;
       })
       .on('zoom', (event) => {
@@ -581,6 +591,7 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
                   <g
                     transform={`translate(${screenX_1949}, ${trackY + 14})`}
                     className="cursor-pointer"
+                    data-interactive="true"
                     onClick={(e) => handleEventClick(e, event1949)}
                     onMouseDown={(e) => e.stopPropagation()}
                     role="button"
@@ -642,6 +653,7 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
                 key={`${node.event.year}-${node.event.title}`}
                 transform={`translate(${finalX}, ${centerY})`}
                 className="cursor-pointer"
+                data-interactive="true"
                 onClick={(e) => handleEventClick(e, node.event)}
                 onMouseDown={(e) => e.stopPropagation()} // Prevent D3 zoom from capturing click
                 style={{ zIndex: node.event.importance === 1 ? 50 : 10, pointerEvents: 'auto' }}
