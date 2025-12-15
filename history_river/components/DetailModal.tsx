@@ -16,7 +16,33 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
   const lang = i18n.language || 'en';
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState<string>('');
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
+  // 1. Initialize Portal Target
+  useEffect(() => {
+    let target = document.getElementById('portal-root');
+    if (!target) {
+      target = document.createElement('div');
+      target.id = 'portal-root';
+      // High Z-index container, passes clicks through unless content catches them
+      target.style.cssText = `
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      `;
+      document.body.appendChild(target);
+    }
+    setPortalTarget(target);
+
+    // Cleanup? Usually we keep the root, but we could remove it if we wanted strict cleanup.
+    // keeping it is better for performance.
+  }, []);
+
+  // 2. Load Data
   useEffect(() => {
     console.log('DetailModal: Mounted/Updated for', event?.title);
     if (!event) return;
@@ -46,16 +72,16 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
     return () => { isMounted = false; };
   }, [year, event, i18n.language]);
 
-  if (!event) return null;
+  if (!event || !portalTarget) return null;
 
-  // Use Portal to render directly into document.body, bypassing parent z-index/overflow issues.
+  // Use Portal to render directly into portalTarget
   return createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6" style={{ visibility: 'visible' }}>
+    <div className="w-full h-full flex items-center justify-center p-4 sm:p-6 pointer-events-auto" style={{ visibility: 'visible' }}>
       <div
         className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      {/* Added temporary red border for debugging */}
+      {/* Red border kept for verification as requested */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] duration-200 border-4 border-red-500" style={{ opacity: 1, transform: 'none' }}>
 
         {/* Header */}
@@ -130,7 +156,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
         </div>
       </div>
     </div>,
-    document.body
+    portalTarget
   );
 };
 
