@@ -24,22 +24,12 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
     if (!target) {
       target = document.createElement('div');
       target.id = 'portal-root';
-      // High Z-index container, passes clicks through unless content catches them
-      target.style.cssText = `
-        position: fixed;
-        inset: 0;
-        z-index: 99999;
-        pointer-events: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      `;
+      // Ideally, portal root is just a container. We don't strictly need styles if children are fixed.
+      // But adding z-index here ensures stacking if we moved to relative children.
+      // For fixed children, the portal root's position doesn't limit them unless it has transform/filter.
       document.body.appendChild(target);
     }
     setPortalTarget(target);
-
-    // Cleanup? Usually we keep the root, but we could remove it if we wanted strict cleanup.
-    // keeping it is better for performance.
   }, []);
 
   // 2. Load Data
@@ -76,13 +66,13 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
 
   // Use Portal to render directly into portalTarget
   return createPortal(
-    <div className="w-full h-full flex items-center justify-center p-4 sm:p-6 pointer-events-auto" style={{ visibility: 'visible' }}>
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6" style={{ visibility: 'visible' }}>
       <div
         className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      {/* Red border kept for verification as requested */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] duration-200 border-4 border-red-500" style={{ opacity: 1, transform: 'none' }}>
+
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] duration-200" style={{ opacity: 1, transform: 'none' }}>
 
         {/* Header */}
         <div className="px-6 py-4 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
