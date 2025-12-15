@@ -61,13 +61,49 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
 
   // Use Portal to render directly into portalTarget
   return createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6" style={{ visibility: 'visible' }}>
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 99999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        pointerEvents: 'auto', // CRITICAL: Re-enable clicks
+        visibility: 'visible',
+      }}
+    >
       <div
-        className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm transition-opacity"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(28, 25, 23, 0.4)', // stone-900/40
+          backdropFilter: 'blur(4px)',
+          cursor: 'pointer',
+        }}
         onClick={onClose}
       />
 
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] duration-200" style={{ opacity: 1, transform: 'none' }}>
+      <div
+        className="relative bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: '32rem', // max-w-lg
+          maxHeight: '85vh',
+          opacity: 1,
+          transform: 'none',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: 'white', // Ensure opacity
+        }}
+      >
 
         {/* Header */}
         <div className="px-6 py-4 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
