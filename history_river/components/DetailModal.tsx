@@ -1,11 +1,50 @@
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { fetchEventDetails } from '../services/geminiService';
+import { HistoricalEvent } from '../types';
+import { useTranslation } from 'react-i18next';
 
-// ... (props interface)
+interface DetailModalProps {
+  year: number;
+  event: HistoricalEvent | null;
+  onClose: () => void;
+}
 
 const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
-  // ... (hooks and state)
+  console.log('DetailModal: Rendering', event?.title);
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language || 'en';
+  const [loading, setLoading] = useState(true);
+  const [content, setContent] = useState<string>('');
 
-  // (useEffect logic same as before)
+  useEffect(() => {
+    console.log('DetailModal: Mounted/Updated for', event?.title);
+    if (!event) return;
+
+    let isMounted = true;
+
+    const loadDetails = async () => {
+      setLoading(true);
+      const displayTitle = lang.startsWith('en')
+        ? (event.titleEn || event.title)
+        : (event.titleZh || event.title);
+      const context = `Historical Event: ${displayTitle} (Type: ${event.type})`;
+
+      try {
+        const text = await fetchEventDetails(year, context, displayTitle, i18n.language);
+        if (isMounted) {
+          setContent(text);
+        }
+      } catch (error) {
+        if (isMounted) setContent(t('app.no_data'));
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadDetails();
+    return () => { isMounted = false; };
+  }, [year, event, i18n.language]);
 
   if (!event) return null;
 
@@ -36,7 +75,6 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
 
         {/* Content */}
         <div className="p-6 overflow-y-auto">
-          {/* ... content unchanged ... */}
           <div className="flex items-baseline gap-3 mb-2">
             <span className="text-2xl font-bold text-amber-700 font-serif">
               {year < 0 ? t('date_format.bc', { year: Math.abs(year) }) : t('date_format.ad', { year })}
