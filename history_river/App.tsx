@@ -10,18 +10,18 @@ import { DYNASTIES as FALLBACK_DYNASTIES, KEY_EVENTS as FALLBACK_EVENTS } from '
 import { WORLD_HISTORY } from './data/worldHistory';
 
 const COUNTRIES = [
-  { code: 'overview', label: '🌎 全览' },
-  { code: 'china', label: '🇨🇳 中国 (China)' },
-  { code: 'usa', label: '🇺🇸 美国 (USA)' },
-  { code: 'uk', label: '🇬🇧 英国 (UK)' },
-  { code: 'france', label: '🇫🇷 法国 (France)' },
-  { code: 'germany', label: '🇩🇪 德国 (Germany)' },
-  { code: 'russia', label: '🇷🇺 俄罗斯 (Russia)' },
-  { code: 'poland', label: '🇵🇱 波兰 (Poland)' },
-  { code: 'greece', label: '🇬🇷 希腊 (Greece)' },
-  { code: 'italy', label: '🇮🇹 意大利 (Italy)' },
-  { code: 'india', label: '🇮🇳 印度 (India)' },
-  { code: 'japan', label: '🇯🇵 日本' },
+  { code: 'overview', emoji: '🌎' },
+  { code: 'china', emoji: '🇨🇳' },
+  { code: 'usa', emoji: '🇺🇸' },
+  { code: 'uk', emoji: '🇬🇧' },
+  { code: 'france', emoji: '🇫🇷' },
+  { code: 'germany', emoji: '🇩🇪' },
+  { code: 'russia', emoji: '🇷🇺' },
+  { code: 'poland', emoji: '🇵🇱' },
+  { code: 'greece', emoji: '🇬🇷' },
+  { code: 'italy', emoji: '🇮🇹' },
+  { code: 'india', emoji: '🇮🇳' },
+  { code: 'japan', emoji: '🇯🇵' },
 ];
 
 const App: React.FC = () => {
@@ -206,7 +206,9 @@ const App: React.FC = () => {
               className="appearance-none bg-white/80 backdrop-blur-md px-4 py-2 pr-8 rounded-xl shadow-sm border border-stone-200/50 text-stone-700 font-medium hover:bg-white transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-amber-500/20"
             >
               {COUNTRIES.map(c => (
-                <option key={c.code} value={c.code}>{c.label}</option>
+                <option key={c.code} value={c.code}>
+                  {c.emoji} {t(`countries.${c.code}`)}
+                </option>
               ))}
             </select>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-stone-400">
