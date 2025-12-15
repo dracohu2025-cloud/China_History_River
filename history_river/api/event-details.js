@@ -25,16 +25,23 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { year, context, event_title } = req.body;
+  const { year, context, event_title, language } = req.body;
 
   if (!year) {
     return res.status(400).json({ error: 'Year is required' });
   }
 
+  // Normalize language (default to zh if not provided or starts with zh)
+  // If frontend sends 'zh' or 'zh-CN', we treat as Chinese.
+  // Anything else (like 'en') we treat as English.
+  const langCode = (language || 'zh').toLowerCase();
+  const isChinese = langCode.startsWith('zh');
+
   try {
     // 1. Check Cache
+    // CRITICAL: Cache key must include language so we don't serve Chinese to English users
     const title = event_title || '__year__';
-    const uuid = crypto.createHash('sha256').update(`${title}|${year}`).digest('hex');
+    const uuid = crypto.createHash('sha256').update(`${title}|${year}|${langCode}`).digest('hex');
 
     const { data: cacheEntry, error: cacheError } = await supabase
       .from('timeline_event_cache')
@@ -53,10 +60,22 @@ export default async function handler(req, res) {
       throw new Error('OpenRouter API Key not configured');
     }
 
-    const prompt = `你是一位精通中国历史的专家。请用简体中文为这一年的历史事件提供一个引人入胜的简短总结（约150字）。
+    let prompt;
+    let systemMessage;
+
+    if (isChinese) {
+      systemMessage = '你是中国史专家，输出简体中文的简短文本。';
+      prompt = `你是一位精通中国历史的专家。请用简体中文为这一年的历史事件提供一个引人入胜的简短总结（约150字）。
 用户交互上下文: "${context || ''}". 年份: ${year}.
 如果该年份没有特别明确的单一重大事件，请描述当时的时代背景、文化风貌或正在发生的长期历史进程。侧重于文化、政治或军事意义。
 请直接输出纯文本，分段落显示，不要使用 Markdown 标题。`;
+    } else {
+      systemMessage = 'You are an expert on Chinese history. Output concise text in English.';
+      prompt = `You are an expert on Chinese history. Please provide a captivating, short summary (approx 150 words) of the historical events in this year, written in ENGLISH.
+Context from user interaction: "${context || ''}". Year: ${year}.
+If there is no specific major event defined for this year, describe the era's background, cultural atmosphere, or ongoing historical processes. Focus on cultural, political, or military significance.
+Output pure text only, separate paragraphs with newlines. Do not use Markdown headers.`;
+    }
 
     const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -65,9 +84,9 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'deepseek/deepseek-v3.2-exp', // Or fall back to deepseek/deepseek-chat
+        model: 'deepseek/deepseek-chat', // Use stable V3 model ID (deepseek-chat) to be safe, V3.2 might be experimental/beta
         messages: [
-          { role: 'system', content: '你是中国史专家，输出简体中文的简短文本。' },
+          { role: 'system', content: systemMessage },
           { role: 'user', content: prompt }
         ]
       })
