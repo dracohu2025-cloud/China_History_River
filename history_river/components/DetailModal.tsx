@@ -10,12 +10,14 @@ interface DetailModalProps {
 }
 
 const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
+  console.log('DetailModal: Rendering', event?.title);
   const { t, i18n } = useTranslation();
   const lang = i18n.language || 'en';
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState<string>('');
 
   useEffect(() => {
+    console.log('DetailModal: Mounted/Updated for', event?.title);
     if (!event) return;
 
     let isMounted = true;

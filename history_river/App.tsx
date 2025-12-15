@@ -249,6 +249,12 @@ const App: React.FC = () => {
 
 
       {/* Detail Modal */}
+      {(() => {
+        if (modalOpen) {
+          console.log('App: Rendering DetailModal check. modalOpen=', modalOpen, 'selectedYear=', selectedYear, 'selectedEvent=', selectedEvent);
+        }
+        return null;
+      })()}
       {modalOpen && selectedYear !== null && (
         <DetailModal
           year={selectedYear}
