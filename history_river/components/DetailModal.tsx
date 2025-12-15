@@ -20,16 +20,11 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
 
   // 1. Initialize Portal Target
   useEffect(() => {
-    let target = document.getElementById('portal-root');
-    if (!target) {
-      target = document.createElement('div');
-      target.id = 'portal-root';
-      // Ideally, portal root is just a container. We don't strictly need styles if children are fixed.
-      // But adding z-index here ensures stacking if we moved to relative children.
-      // For fixed children, the portal root's position doesn't limit them unless it has transform/filter.
-      document.body.appendChild(target);
+    // App.tsx ensures this exists, but we check here just in case or for Type safety
+    const target = document.getElementById('portal-root');
+    if (target) {
+      setPortalTarget(target);
     }
-    setPortalTarget(target);
   }, []);
 
   // 2. Load Data

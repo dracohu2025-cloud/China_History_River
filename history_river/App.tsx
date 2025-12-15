@@ -44,9 +44,29 @@ const App: React.FC = () => {
   const [allEvents, setAllEvents] = useState<{ [code: string]: HistoricalEvent[] }>({});
   const [mounted, setMounted] = useState(false);
 
+  // Ensure portal root exists for DetailModal
   useEffect(() => {
-    console.log('App: Mounted, Version: 2025-12-14-FIXED-ZOOM-OFFICIAL');
+    let portalRoot = document.getElementById('portal-root');
+    if (!portalRoot) {
+      portalRoot = document.createElement('div');
+      portalRoot.id = 'portal-root';
+      // Style independent of React styles to correct stacking context
+      portalRoot.style.cssText = `
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      `;
+      document.body.appendChild(portalRoot);
+    }
+  }, []);
+
+  useEffect(() => {
     setMounted(true);
+    console.log('App: Mounted, Version: 2025-12-14-FIXED-ZOOM-OFFICIAL');
 
     // Check if we have history state (returning from 3D view?)
     const loadData = async () => {
