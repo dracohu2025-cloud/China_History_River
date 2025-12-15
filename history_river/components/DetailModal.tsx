@@ -72,8 +72,9 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        pointerEvents: 'auto', // CRITICAL: Re-enable clicks
+        pointerEvents: 'auto',
         visibility: 'visible',
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", // Modern font stack
       }}
     >
       <div
@@ -83,8 +84,8 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
           left: 0,
           width: '100%',
           height: '100%',
-          backgroundColor: 'rgba(28, 25, 23, 0.4)', // stone-900/40
-          backdropFilter: 'blur(4px)',
+          backgroundColor: 'rgba(0, 0, 0, 0.4)', // Slightly darker for better contrast
+          backdropFilter: 'blur(8px)', // Increased blur for modern feel
           cursor: 'pointer',
         }}
         onClick={onClose}
@@ -93,37 +94,39 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
       <div
         style={{
           position: 'relative',
-          width: '100%',
-          maxWidth: '32rem', // max-w-lg
-          maxHeight: '85vh',
+          width: '90%', // Mobile friendly default
+          maxWidth: '520px', // slightly tighter max-width
+          maxHeight: '80vh',
           opacity: 1,
           transform: 'none',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: 'white',
-          borderRadius: '16px', // rounded-2xl
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', // shadow-2xl
+          backgroundColor: 'rgba(255, 255, 255, 0.95)', // Slight translucency
+          backdropFilter: 'blur(12px)',
+          borderRadius: '20px',
+          boxShadow: '0 20px 60px -10px rgba(0, 0, 0, 0.3)', // Deeper shadow
           overflow: 'hidden',
+          border: '1px solid rgba(255, 255, 255, 0.4)',
         }}
       >
 
         {/* Header */}
         <div style={{
-          padding: '16px 24px', // px-6 py-4
-          borderBottom: '1px solid #f5f5f4', // border-stone-100
+          padding: '16px 24px',
+          borderBottom: '1px solid rgba(0,0,0,0.06)',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'flex-start', // changed to flex-start for title alignment
-          backgroundColor: '#fafaf9', // bg-stone-50
+          alignItems: 'center',
+          backgroundColor: 'rgba(255,255,255,0.8)',
         }}>
           <div style={{ flex: 1, marginRight: '16px' }}>
             <h2 style={{
-              fontSize: '1.5rem', // text-2xl
-              fontWeight: '700', // font-bold
-              color: '#292524', // text-stone-800
-              fontFamily: 'serif',
+              fontSize: '1.25rem', // Slightly more compact header
+              fontWeight: '700',
+              color: '#1a1a1a',
               margin: 0,
-              lineHeight: 1.2,
+              lineHeight: 1.3,
+              letterSpacing: '-0.01em',
             }}>
               {lang.startsWith('zh') ? event.title : (event.titleEn || event.title)}
             </h2>
@@ -131,148 +134,137 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
           <button
             onClick={onClose}
             style={{
-              padding: '4px',
-              borderRadius: '9999px',
-              color: '#a8a29e', // text-stone-400
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              color: '#666',
               cursor: 'pointer',
-              background: 'transparent',
+              background: 'rgba(0,0,0,0.04)',
               border: 'none',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              transition: 'all 0.2s',
             }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f4'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.08)';
+              e.currentTarget.style.color = '#000';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.04)';
+              e.currentTarget.style.color = '#666';
+            }}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 18 18" /></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 18 18" /></svg>
           </button>
         </div>
 
         {/* Content */}
         <div style={{
-          padding: '24px', // p-6
+          padding: '24px 24px 16px 24px', // Tighter bottom padding
           overflowY: 'auto',
-          flex: 1, // Allow content to grow/shrink
+          flex: 1,
         }}>
+          {/* Year Display */}
           <div style={{
+            marginBottom: '12px',
             display: 'flex',
-            alignItems: 'baseline',
-            gap: '12px', // gap-3
-            marginBottom: '8px', // mb-2
+            alignItems: 'center',
           }}>
             <span style={{
-              fontSize: '1.5rem', // text-2xl
-              fontWeight: '700',
-              color: '#b45309', // text-amber-700
-              fontFamily: 'serif',
+              fontSize: '2.5rem', // Large, elegant year
+              fontWeight: '800',
+              color: '#d97706', // amber-600
+              fontFamily: "'Playfair Display', serif", // Fallback to serif for date creates nice contrast
+              lineHeight: 1,
+              opacity: 0.9,
             }}>
-              {year < 0 ? t('date_format.bc', { year: Math.abs(year) }) : t('date_format.ad', { year })}
+              {Math.abs(year)}
             </span>
             <span style={{
-              padding: '2px 8px',
-              borderRadius: '4px',
-              fontSize: '0.75rem', // text-xs
+              marginLeft: '6px',
+              fontSize: '1rem',
               fontWeight: '600',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              backgroundColor: event.type === 'war' ? '#fee2e2' : // bg-red-100
-                event.type === 'politics' ? '#dbeafe' : // bg-blue-100
-                  event.type === 'culture' ? '#fef3c7' : // bg-amber-100
-                    '#f5f5f4', // bg-stone-100
-              color: event.type === 'war' ? '#b91c1c' : // text-red-700
-                event.type === 'politics' ? '#1d4ed8' : // text-blue-700
-                  event.type === 'culture' ? '#b45309' : // text-amber-700
-                    '#44403c', // text-stone-700
+              color: '#d97706',
+              opacity: 0.6,
+              marginTop: '8px', // Align with baseline
             }}>
-              {event.type}
+              {year < 0 ? 'B.C.' : 'A.D.'}
             </span>
           </div>
 
-          <h3 style={{
-            fontSize: '1.5rem', // text-2xl
-            fontWeight: '700',
-            color: '#1c1917', // text-stone-900
-            marginBottom: '16px', // mb-4
-            lineHeight: 1.375, // leading-snug
-            marginTop: 0,
-          }}>
-            {lang.startsWith('zh') ? event.title : (event.titleEn || event.title)}
-          </h3>
-
           <div style={{
-            fontSize: '0.875rem', // text-sm
-            color: '#57534e', // text-stone-600
-            lineHeight: 1.625, // leading-relaxed
+            fontSize: '0.95rem',
+            color: '#444',
+            lineHeight: 1.75,
+            letterSpacing: '0.01em',
           }}>
             {loading ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0', gap: '16px' }}>
-                <div className="animate-spin" style={{ // Keep animate-spin if possible, or fallback
-                  width: '40px',
-                  height: '40px',
-                  border: '4px solid #d97706', // amber-600
-                  borderTopColor: 'transparent',
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0', gap: '12px' }}>
+                <div className="animate-spin" style={{
+                  width: '32px',
+                  height: '32px',
+                  border: '3px solid rgba(217, 119, 6, 0.2)',
+                  borderTopColor: '#d97706',
                   borderRadius: '50%',
-                  animation: 'spin 1s linear infinite' // Add standard spin animation inline just in case
+                  animation: 'spin 0.8s linear infinite'
                 }}></div>
-                <p style={{ color: '#78716c' }}>{t('app.loading')}</p>
+                <p style={{ color: '#999', fontSize: '0.875rem' }}>{t('app.loading')}</p>
                 <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
               </div>
             ) : (
               content.split('\n').map((paragraph, idx) => (
-                paragraph.trim() && <p key={idx} style={{ marginBottom: '16px', textIndent: '2em' }}>{paragraph}</p>
+                paragraph.trim() && <p key={idx} style={{ marginBottom: '16px', textAlign: 'justify' }}>{paragraph}</p>
               ))
             )}
           </div>
-
-          {/* External Link (Wiki) */}
-          <div style={{
-            marginTop: '24px',
-            paddingTop: '16px',
-            borderTop: '1px solid #f5f5f4', // border-stone-100
-          }}>
-            <a
-              href={`https://en.wikipedia.org/wiki/${encodeURIComponent(event.title)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#b45309', // text-amber-700
-                textDecoration: 'none',
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.color = '#92400e'} // hover:text-amber-800
-              onMouseLeave={(e) => e.currentTarget.style.color = '#b45309'}
-            >
-              <span>{t('modal.wiki')}</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
-            </a>
-          </div>
         </div>
 
+        {/* Footer */}
         <div style={{
-          padding: '16px',
-          backgroundColor: '#fafaf9', // bg-stone-50
-          borderTop: '1px solid #f5f5f4', // border-stone-100
-          textAlign: 'right',
+          padding: '16px 24px',
+          backgroundColor: '#fafaf9',
+          borderTop: '1px solid rgba(0,0,0,0.04)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
         }}>
+
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            opacity: 0.5,
+          }}>
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14" style={{ color: '#666' }}>
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+            </svg>
+            <span style={{
+              fontSize: '0.75rem',
+              fontWeight: '500',
+              color: '#666',
+              fontFamily: 'monospace',
+            }}>
+              Powered by DeepSeek V3.2
+            </span>
+          </div>
+
           <button
             onClick={onClose}
             style={{
-              padding: '8px 16px',
-              backgroundColor: 'white',
-              border: '1px solid #e7e5e4', // border-stone-200
-              color: '#44403c', // text-stone-700
-              fontWeight: '500',
-              borderRadius: '8px', // rounded-lg
+              padding: '8px 20px',
+              backgroundColor: '#1a1a1a',
+              border: 'none',
+              color: 'white',
+              fontWeight: '600',
+              borderRadius: '12px',
               cursor: 'pointer',
-              fontSize: '0.875rem', // text-sm
-              boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+              fontSize: '0.875rem',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              transition: 'transform 0.1s',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fafaf9'; e.currentTarget.style.borderColor = '#d6d3d1'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'white'; e.currentTarget.style.borderColor = '#e7e5e4'; }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
           >
             {t('modal.close')}
           </button>
