@@ -405,16 +405,18 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                     y1={-ROW_HEIGHT / 2}
                                     x2={xScale(DATA_END_YEAR)}
                                     y2={-ROW_HEIGHT / 2}
-                                    stroke="#e5e5e5"
-                                    strokeWidth={0.5}
+                                    stroke="#d1d5db"
+                                    strokeWidth={1}
+                                    vectorEffect="non-scaling-stroke"
                                 />
                                 <line
                                     x1={xScale(DATA_START_YEAR)}
                                     y1={ROW_HEIGHT / 2}
                                     x2={xScale(DATA_END_YEAR)}
                                     y2={ROW_HEIGHT / 2}
-                                    stroke="#e5e5e5"
-                                    strokeWidth={0.5}
+                                    stroke="#d1d5db"
+                                    strokeWidth={1}
+                                    vectorEffect="non-scaling-stroke"
                                 />
 
                                 {/* River Paths */}
