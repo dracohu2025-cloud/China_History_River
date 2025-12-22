@@ -742,11 +742,11 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                     zIndex: 100,
                     display: 'flex',
                     flexDirection: 'row',
-                    alignItems: 'flex-start',
+                    alignItems: 'flex-end',
                     gap: 8
                 }}
             >
-                {/* Tip Button */}
+                {/* Tip Button - Always at bottom */}
                 <button
                     onClick={() => setShowTipModal(true)}
                     style={{
@@ -770,129 +770,106 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                     </svg>
                     接受打赏
                 </button>
-                {/* Counter Badge */}
-                <button
-                    onClick={() => setPodcastListExpanded(!podcastListExpanded)}
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        padding: '8px 16px',
-                        backgroundColor: '#d97706',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: podcastListExpanded ? '8px 8px 0 0' : 8,
-                        cursor: 'pointer',
-                        fontSize: 14,
-                        fontWeight: 600,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M8 5v14l11-7z" />
-                    </svg>
-                    <span>已上线播客 ({allPodcasts.length})</span>
-                    <svg
-                        width="12" height="12"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        style={{ transform: podcastListExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
-                    >
-                        <path d="M7 10l5 5 5-5z" />
-                    </svg>
-                </button>
 
-                {/* Expandable List */}
-                {podcastListExpanded && allPodcasts.length > 0 && (
-                    <div
+                {/* Podcast Section - List expands upward */}
+                <div style={{ display: 'flex', flexDirection: 'column-reverse' }}>
+                    {/* Counter Badge - Always at bottom */}
+                    <button
+                        onClick={() => setPodcastListExpanded(!podcastListExpanded)}
                         style={{
-                            position: 'relative',
-                            backgroundColor: 'white',
-                            border: '1px solid #e5e5e5',
-                            borderTop: 'none',
-                            borderRadius: '0 0 8px 8px',
-                            maxHeight: 500,
-                            overflowY: 'auto',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            padding: '8px 16px',
+                            backgroundColor: '#d97706',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: podcastListExpanded ? '0 0 8px 8px' : 8,
+                            cursor: 'pointer',
+                            fontSize: 14,
+                            fontWeight: 600,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                            transition: 'all 0.2s'
                         }}
                     >
-                        {/* Close Button */}
-                        <button
-                            onClick={() => setPodcastListExpanded(false)}
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                        <span>已上线播客 ({allPodcasts.length})</span>
+                        {podcastListExpanded ? (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ transition: 'transform 0.2s' }}>
+                                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                            </svg>
+                        ) : (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(180deg)', transition: 'transform 0.2s' }}>
+                                <path d="M7 10l5 5 5-5z" />
+                            </svg>
+                        )}
+                    </button>
+
+                    {/* Expandable List - Above the button */}
+                    {podcastListExpanded && allPodcasts.length > 0 && (
+                        <div
                             style={{
-                                position: 'sticky',
-                                top: 0,
-                                right: 0,
-                                float: 'right',
-                                margin: '8px 8px 0 0',
-                                width: 28,
-                                height: 28,
-                                borderRadius: '50%',
-                                border: '1px solid #e5e5e5',
                                 backgroundColor: 'white',
-                                color: '#6b7280',
-                                fontSize: 16,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                                zIndex: 10
+                                border: '1px solid #e5e5e5',
+                                borderBottom: 'none',
+                                borderRadius: '8px 8px 0 0',
+                                maxHeight: 500,
+                                overflowY: 'auto',
+                                boxShadow: '0 -4px 12px rgba(0,0,0,0.15)',
+                                width: 280
                             }}
-                            title="收起"
                         >
-                            ×
-                        </button>
-                        {allPodcasts.map((podcast, idx) => (
-                            <div
-                                key={podcast.id || idx}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    padding: '10px 12px',
-                                    borderBottom: idx < allPodcasts.length - 1 ? '1px solid #f0f0f0' : 'none',
-                                    fontSize: 13
-                                }}
-                            >
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ color: '#d97706', fontWeight: 600, fontSize: 12 }}>
-                                        {podcast.eventYear < 0 ? `公元前${Math.abs(podcast.eventYear)}年` : `公元${podcast.eventYear}年`}
-                                    </div>
-                                    <div style={{ color: '#374151', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {podcast.eventTitle}
-                                    </div>
-                                    <div style={{ color: '#9ca3af', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                        <span>《{podcast.bookTitle}》</span>
-                                        {podcast.doubanRating && (
-                                            <span style={{ color: '#22c55e' }}>★ {podcast.doubanRating.toFixed(1)}</span>
-                                        )}
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => window.open(`/player.html?episode=${podcast.podcastUuid}`, '_blank')}
+                            {allPodcasts.map((podcast, idx) => (
+                                <div
+                                    key={podcast.id || idx}
                                     style={{
-                                        padding: '6px 12px',
-                                        backgroundColor: '#d97706',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: 6,
-                                        cursor: 'pointer',
-                                        fontSize: 12,
-                                        fontWeight: 500,
-                                        marginLeft: 8,
-                                        flexShrink: 0
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        padding: '10px 12px',
+                                        borderBottom: idx < allPodcasts.length - 1 ? '1px solid #f0f0f0' : 'none',
+                                        fontSize: 13
                                     }}
                                 >
-                                    播放
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ color: '#d97706', fontWeight: 600, fontSize: 12 }}>
+                                            {podcast.eventYear < 0 ? `公元前${Math.abs(podcast.eventYear)}年` : `公元${podcast.eventYear}年`}
+                                        </div>
+                                        <div style={{ color: '#374151', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {podcast.eventTitle}
+                                        </div>
+                                        <div style={{ color: '#9ca3af', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                            <span>《{podcast.bookTitle}》</span>
+                                            {podcast.doubanRating && (
+                                                <span style={{ color: '#22c55e' }}>★ {podcast.doubanRating.toFixed(1)}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => window.open(`/player.html?episode=${podcast.podcastUuid}`, '_blank')}
+                                        style={{
+                                            padding: '6px 12px',
+                                            backgroundColor: '#d97706',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: 6,
+                                            cursor: 'pointer',
+                                            fontSize: 12,
+                                            fontWeight: 500,
+                                            marginLeft: 8,
+                                            flexShrink: 0
+                                        }}
+                                    >
+                                        播放
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
-
             {/* Book Collection Button - Bottom Left */}
             <button
                 onClick={() => setShowBookCollectionModal(true)}
