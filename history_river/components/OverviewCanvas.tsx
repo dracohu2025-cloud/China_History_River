@@ -807,6 +807,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                 {podcastListExpanded && allPodcasts.length > 0 && (
                     <div
                         style={{
+                            position: 'relative',
                             backgroundColor: 'white',
                             border: '1px solid #e5e5e5',
                             borderTop: 'none',
@@ -816,6 +817,33 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                             boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                         }}
                     >
+                        {/* Close Button */}
+                        <button
+                            onClick={() => setPodcastListExpanded(false)}
+                            style={{
+                                position: 'sticky',
+                                top: 0,
+                                right: 0,
+                                float: 'right',
+                                margin: '8px 8px 0 0',
+                                width: 28,
+                                height: 28,
+                                borderRadius: '50%',
+                                border: '1px solid #e5e5e5',
+                                backgroundColor: 'white',
+                                color: '#6b7280',
+                                fontSize: 16,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                zIndex: 10
+                            }}
+                            title="收起"
+                        >
+                            ×
+                        </button>
                         {allPodcasts.map((podcast, idx) => (
                             <div
                                 key={podcast.id || idx}
