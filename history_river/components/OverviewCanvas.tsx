@@ -737,7 +737,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
 
             </svg>
 
-            {/* Podcast Counter & Tip Button - Bottom Right */}
+            {/* Podcast Counter & Action Buttons - Bottom Right */}
             <div
                 style={{
                     position: 'absolute',
@@ -750,30 +750,118 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                     gap: 8
                 }}
             >
-                {/* Tip Button - Always at bottom */}
-                <button
-                    onClick={() => setShowTipModal(true)}
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        padding: '8px 14px',
-                        backgroundColor: '#ec4899',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 8,
-                        cursor: 'pointer',
-                        fontSize: 13,
-                        fontWeight: 600,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                    </svg>
-                    接受打赏
-                </button>
+                {/* Book Collection Section */}
+                <div style={{ display: 'flex', flexDirection: 'column-reverse' }}>
+                    <button
+                        onClick={() => setShowBookCollectionModal(!showBookCollectionModal)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '8px 14px',
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: showBookCollectionModal ? '0 0 8px 8px' : 8,
+                            cursor: 'pointer',
+                            fontSize: 13,
+                            fontWeight: 600,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
+                        </svg>
+                        好书收集
+                        {showBookCollectionModal ? (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                            </svg>
+                        ) : (
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(180deg)' }}>
+                                <path d="M7 10l5 5 5-5z" />
+                            </svg>
+                        )}
+                    </button>
+                    {showBookCollectionModal && (
+                        <div style={{
+                            backgroundColor: 'white',
+                            border: '1px solid #e5e5e5',
+                            borderBottom: 'none',
+                            borderRadius: '8px 8px 0 0',
+                            boxShadow: '0 -4px 12px rgba(0,0,0,0.15)',
+                            padding: 12,
+                            width: 220
+                        }}>
+                            <img
+                                src="/book-collection-qr.png"
+                                alt="历史长河好书收集表"
+                                style={{ width: '100%', borderRadius: 8 }}
+                            />
+                            <p style={{ fontSize: 12, color: '#6b7280', textAlign: 'center', marginTop: 8, marginBottom: 0 }}>
+                                扫码推荐好书
+                            </p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Tip Section */}
+                <div style={{ display: 'flex', flexDirection: 'column-reverse' }}>
+                    <button
+                        onClick={() => setShowTipModal(!showTipModal)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '8px 14px',
+                            backgroundColor: '#ec4899',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: showTipModal ? '0 0 8px 8px' : 8,
+                            cursor: 'pointer',
+                            fontSize: 13,
+                            fontWeight: 600,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                        </svg>
+                        接受打赏
+                        {showTipModal ? (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                            </svg>
+                        ) : (
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(180deg)' }}>
+                                <path d="M7 10l5 5 5-5z" />
+                            </svg>
+                        )}
+                    </button>
+                    {showTipModal && (
+                        <div style={{
+                            backgroundColor: 'white',
+                            border: '1px solid #e5e5e5',
+                            borderBottom: 'none',
+                            borderRadius: '8px 8px 0 0',
+                            boxShadow: '0 -4px 12px rgba(0,0,0,0.15)',
+                            padding: 12,
+                            width: 220
+                        }}>
+                            <img
+                                src="/tip-qr.jpg"
+                                alt="打赏码"
+                                style={{ width: '100%', borderRadius: 8 }}
+                            />
+                            <p style={{ fontSize: 12, color: '#6b7280', textAlign: 'center', marginTop: 8, marginBottom: 0 }}>
+                                感谢您的支持 ❤️
+                            </p>
+                        </div>
+                    )}
+                </div>
+
 
                 {/* Podcast Section - List expands upward */}
                 <div style={{ display: 'flex', flexDirection: 'column-reverse' }}>
@@ -874,155 +962,6 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                     )}
                 </div>
             </div>
-            {/* Book Collection Button - Bottom Left */}
-            <button
-                onClick={() => setShowBookCollectionModal(true)}
-                style={{
-                    position: 'absolute',
-                    bottom: 16,
-                    left: 16,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '8px 14px',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                    zIndex: 100
-                }}
-            >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" />
-                </svg>
-                好书收集
-            </button>
-
-            {/* Book Collection Modal */}
-            {showBookCollectionModal && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(0,0,0,0.6)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 1000
-                    }}
-                    onClick={() => setShowBookCollectionModal(false)}
-                >
-                    <div
-                        style={{
-                            position: 'relative',
-                            maxWidth: '90%',
-                            maxHeight: '90%'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <img
-                            src="/book-collection-qr.png"
-                            alt="历史长河好书收集表"
-                            style={{
-                                maxWidth: '100%',
-                                maxHeight: '80vh',
-                                borderRadius: 12,
-                                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-                            }}
-                        />
-                        <button
-                            onClick={() => setShowBookCollectionModal(false)}
-                            style={{
-                                position: 'absolute',
-                                top: -12,
-                                right: -12,
-                                width: 32,
-                                height: 32,
-                                borderRadius: '50%',
-                                border: 'none',
-                                backgroundColor: 'white',
-                                color: '#374151',
-                                fontSize: 18,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-                            }}
-                        >
-                            ×
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Tip QR Code Modal */}
-            {showTipModal && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(0,0,0,0.6)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 1000
-                    }}
-                    onClick={() => setShowTipModal(false)}
-                >
-                    <div
-                        style={{
-                            position: 'relative',
-                            maxWidth: '90%',
-                            maxHeight: '90%'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <img
-                            src="/tip-qr.jpg"
-                            alt="打赏码"
-                            style={{
-                                maxWidth: '100%',
-                                maxHeight: '80vh',
-                                borderRadius: 12,
-                                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-                            }}
-                        />
-                        <button
-                            onClick={() => setShowTipModal(false)}
-                            style={{
-                                position: 'absolute',
-                                top: -12,
-                                right: -12,
-                                width: 32,
-                                height: 32,
-                                borderRadius: '50%',
-                                border: 'none',
-                                backgroundColor: 'white',
-                                color: '#374151',
-                                fontSize: 18,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-                            }}
-                        >
-                            ×
-                        </button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
