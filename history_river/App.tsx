@@ -234,14 +234,6 @@ const App: React.FC = () => {
             )}
           </button>
            */}
-
-          <a href="https://www.buymeacoffee.com/dracohu2027" target="_blank" rel="noopener noreferrer">
-            <img
-              src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=dracohu2027&button_colour=BD5FFF&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00"
-              alt="Buy me a coffee"
-              className="h-10 hover:scale-105 transition-transform"
-            />
-          </a>
         </div>
       </div>
 

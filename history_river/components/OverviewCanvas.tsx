@@ -782,7 +782,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                             border: '1px solid #e5e5e5',
                             borderTop: 'none',
                             borderRadius: '0 0 8px 8px',
-                            maxHeight: 300,
+                            maxHeight: 500,
                             overflowY: 'auto',
                             boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                         }}
