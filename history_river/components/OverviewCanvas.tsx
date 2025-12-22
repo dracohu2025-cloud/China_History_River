@@ -83,7 +83,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
     // WorldHeight = ScreenHeight / INITIAL_ZOOM
     const WORLD_HEIGHT = height / INITIAL_ZOOM;
     // COMPRESSION: Row height spacing relative to original. Higher = more space per country
-    const ROW_COMPRESSION = 0.85;
+    const ROW_COMPRESSION = 1.0;
     const ROW_HEIGHT = (WORLD_HEIGHT / (COUNTRIES_LIST.length || 1)) * ROW_COMPRESSION;
 
     // Initial viewport state
