@@ -422,9 +422,9 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                         const name = getDynastyName(dynasty);
                                         const fontSize = Math.min(60, Math.max(12, widthPx / (name.length + 1)));
 
-                                        // Calculate estimated text width and hide if it would overflow
+                                        // Calculate estimated text width and hide if it would overflow significantly
                                         const estimatedTextWidth = name.length * fontSize * 0.6; // Approximate char width
-                                        if (estimatedTextWidth > widthPx * 0.9) return null; // Don't show if text is too wide
+                                        if (estimatedTextWidth > widthPx * 1.5) return null; // Only hide if text is much wider than available space
 
                                         return (
                                             <text
