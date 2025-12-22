@@ -280,7 +280,7 @@ export const KEY_EVENTS: HistoricalEvent[] = [
     { year: 1894, title: '甲午海战', titleEn: 'First Sino-Japanese War', type: 'war', importance: 2 },
     { year: 1895, title: '公车上书', titleEn: 'Gongche Shangshu Movement', type: 'politics', importance: 4 },
     { year: 1898, title: '戊戌变法', titleEn: 'Hundred Days\' Reform', type: 'politics', importance: 3 },
-    { year: 1900, title: '八国联军侵华', titleEn: 'Boxer Rebellion', type: 'war', importance: 2 },
+    { year: 1900, title: '八国联军侵华', titleEn: 'Boxer Rebellion', type: 'war', importance: 1 },
     { year: 1905, title: '废除科举', titleEn: 'Abolition of Imperial Exams', type: 'politics', importance: 3 },
     // 明历代帝王登基
     { year: 1368, title: '明太祖洪武登基', titleEn: 'Hongwu Emperor', type: 'politics', importance: 2 },
