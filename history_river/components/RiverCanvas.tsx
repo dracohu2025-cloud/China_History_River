@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { getDynastyPower } from '../data/historyData';
 import { HistoricalEvent, Viewport, EventDetail, Dynasty, RiverPin } from '../types';
 import { getPodcastById, PodcastJobRow } from '@/services/podcastService';
+import { fetchEventsWithPodcasts } from '@/services/eventPodcastService';
 
 
 
@@ -231,6 +232,12 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
   const [cursorX, setCursorX] = useState<number | null>(null);
   const [podcastCache, setPodcastCache] = useState<Record<string, PodcastJobRow | null>>({});
   const [hoverEpisodeId, setHoverEpisodeId] = useState<string | null>(null);
+  const [eventsWithPodcasts, setEventsWithPodcasts] = useState<Set<string>>(new Set());
+
+  // Fetch events that have podcasts on mount
+  useEffect(() => {
+    fetchEventsWithPodcasts().then(setEventsWithPodcasts);
+  }, []);
 
   // Constants for data generation
   const DATA_START_YEAR = -2500;
@@ -686,6 +693,22 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
                       {/* {` [${i18n.language}]`} */}
                     </tspan>
                   </text>
+                  {/* Play icon for events with podcasts */}
+                  {eventsWithPodcasts.has(`${node.event.year}:${node.event.title}`) && (
+                    <g transform={`translate(${(node.width / 2 / renderScale) - 18}, 0)`}>
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r="9"
+                        fill="#d97706"
+                        opacity="0.9"
+                      />
+                      <path
+                        d="M-2.5,-4 L4,0 L-2.5,4 Z"
+                        fill="white"
+                      />
+                    </g>
+                  )}
                 </g>
               </g>
             );

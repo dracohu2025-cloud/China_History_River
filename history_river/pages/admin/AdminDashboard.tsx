@@ -3,6 +3,7 @@ import Login from './Login'
 import Dynasties from './Dynasties'
 import Events from './Events'
 import Pins from './Pins'
+import EventPodcasts from './EventPodcasts'
 import { createClient } from '@supabase/supabase-js'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -11,7 +12,7 @@ const supabase = (url && key) ? createClient(url, key) : null
 
 const AdminDashboard: React.FC = () => {
     const [session, setSession] = useState<any>(null)
-    const [tab, setTab] = useState<'dynasties' | 'events' | 'pins'>('dynasties')
+    const [tab, setTab] = useState<'dynasties' | 'events' | 'pins' | 'eventPodcasts'>('dynasties')
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -54,6 +55,7 @@ const AdminDashboard: React.FC = () => {
                             <button onClick={() => setTab('dynasties')} className={`px-3 py-1 rounded-md text-sm font-medium ${tab === 'dynasties' ? 'bg-stone-800 text-white' : 'text-stone-400 hover:text-white hover:bg-stone-800'}`}>朝代管理</button>
                             <button onClick={() => setTab('events')} className={`px-3 py-1 rounded-md text-sm font-medium ${tab === 'events' ? 'bg-stone-800 text-white' : 'text-stone-400 hover:text-white hover:bg-stone-800'}`}>事件管理</button>
                             <button onClick={() => setTab('pins')} className={`px-3 py-1 rounded-md text-sm font-medium ${tab === 'pins' ? 'bg-stone-800 text-white' : 'text-stone-400 hover:text-white hover:bg-stone-800'}`}>播客轨道</button>
+                            <button onClick={() => setTab('eventPodcasts')} className={`px-3 py-1 rounded-md text-sm font-medium ${tab === 'eventPodcasts' ? 'bg-amber-600 text-white' : 'text-stone-400 hover:text-white hover:bg-stone-800'}`}>事件播客</button>
                         </nav>
                     </div>
                     <div className="flex items-center gap-4">
@@ -68,6 +70,7 @@ const AdminDashboard: React.FC = () => {
                 {tab === 'dynasties' && <Dynasties />}
                 {tab === 'events' && <Events />}
                 {tab === 'pins' && <Pins />}
+                {tab === 'eventPodcasts' && <EventPodcasts />}
             </main>
         </div>
     )

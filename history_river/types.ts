@@ -43,3 +43,12 @@ export interface RiverPin {
   title?: string;
   doubanRating?: number | null;
 }
+
+export interface EventPodcast {
+  id: string;
+  eventYear: number;
+  eventTitle: string;
+  podcastUuid: string;
+  bookTitle: string;
+  doubanRating?: number | null;
+}

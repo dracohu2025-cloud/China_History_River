@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchEventDetails } from '../services/geminiService';
-import { HistoricalEvent } from '../types';
+import { HistoricalEvent, EventPodcast } from '../types';
 import { useTranslation } from 'react-i18next';
+import { fetchEventPodcasts } from '../services/eventPodcastService';
 
 interface DetailModalProps {
   year: number;
@@ -17,6 +18,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState<string>('');
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const [podcasts, setPodcasts] = useState<EventPodcast[]>([]);
 
   // 1. Initialize Portal Target
   useEffect(() => {
@@ -56,6 +58,12 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
     loadDetails();
     return () => { isMounted = false; };
   }, [year, event, i18n.language]);
+
+  // 3. Load Podcasts for this event
+  useEffect(() => {
+    if (!event) return;
+    fetchEventPodcasts(event.year, event.title).then(setPodcasts);
+  }, [event]);
 
   if (!event || !portalTarget) return null;
 
@@ -219,6 +227,113 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
             )}
           </div>
         </div>
+
+        {/* Podcast Section */}
+        {podcasts.length > 0 && (
+          <div style={{
+            padding: '16px 24px',
+            backgroundColor: '#fffbeb',
+            borderTop: '1px solid #fef3c7',
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px',
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#d97706">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM9.5 16.5v-9l7 4.5-7 4.5z" />
+              </svg>
+              <span style={{
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#92400e',
+              }}>
+                {lang.startsWith('zh') ? '相关播客' : 'Related Podcasts'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {podcasts.map((podcast) => (
+                <div
+                  key={podcast.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 14px',
+                    backgroundColor: 'white',
+                    borderRadius: '12px',
+                    border: '1px solid #fed7aa',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      color: '#1f2937',
+                      marginBottom: '4px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {podcast.bookTitle}
+                    </div>
+                    {podcast.doubanRating && (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}>
+                        <span style={{ color: '#f59e0b', fontSize: '12px' }}>★</span>
+                        <span style={{
+                          fontSize: '0.75rem',
+                          fontWeight: '500',
+                          color: '#78716c',
+                        }}>
+                          {lang.startsWith('zh') ? '豆瓣' : 'Douban'} {podcast.doubanRating}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => {
+                      window.open(`/player.html?episode=${podcast.podcastUuid}`, '_blank');
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 14px',
+                      backgroundColor: '#d97706',
+                      border: 'none',
+                      color: 'white',
+                      fontWeight: '600',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem',
+                      transition: 'all 0.15s',
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#b45309';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#d97706';
+                      e.currentTarget.style.transform = 'none';
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                    {lang.startsWith('zh') ? '播放' : 'Play'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div style={{
