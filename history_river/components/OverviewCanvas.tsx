@@ -82,9 +82,8 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
     // So WorldHeight * INITIAL_ZOOM = ScreenHeight
     // WorldHeight = ScreenHeight / INITIAL_ZOOM
     const WORLD_HEIGHT = height / INITIAL_ZOOM;
-    // COMPRESSION: Reduce row height spacing to 60% of original, to compact the view
-    // But we will inversely scale the river drawing to keep it the same visual size
-    const ROW_COMPRESSION = 0.65;
+    // COMPRESSION: Row height spacing relative to original. Higher = more space per country
+    const ROW_COMPRESSION = 0.85;
     const ROW_HEIGHT = (WORLD_HEIGHT / (COUNTRIES_LIST.length || 1)) * ROW_COMPRESSION;
 
     // Initial viewport state
