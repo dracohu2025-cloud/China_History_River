@@ -503,9 +503,28 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                 return true;
                             };
 
-                            if (!tryPlace(primaryLane)) {
-                                // Try opposite side
-                                tryPlace(-primaryLane);
+                            // Try multiple lanes: primary, then alternate lanes up to ±10
+                            let placed = false;
+                            const lanesToTry = [primaryLane, -primaryLane];
+
+                            // Add more lanes to try at high zoom levels
+                            const maxLanes = viewport.k > 1 ? 10 : (viewport.k > 0.5 ? 6 : 4);
+                            for (let i = 1; i <= maxLanes && lanesToTry.length < maxLanes * 2; i++) {
+                                lanesToTry.push(i, -i);
+                            }
+
+                            for (const lane of lanesToTry) {
+                                if (tryPlace(lane)) {
+                                    placed = true;
+                                    break;
+                                }
+                            }
+
+                            // At high zoom, always place event even if overlapping
+                            if (!placed && viewport.k > 0.8) {
+                                const fallbackLane = (ev.year * 7 + ev.title.length) % 20 - 10;
+                                const yOffset = fallbackLane * LANE_HEIGHT_PX;
+                                nodes.push({ event: ev, x: screenX, y: rowCenterY, yOffset, width: textWidthPx, title });
                             }
                         });
 
