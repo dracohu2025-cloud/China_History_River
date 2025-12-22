@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import { KEY_EVENTS } from '../../data/historyData'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -16,8 +15,15 @@ interface EventPodcastRow {
     created_at?: string
 }
 
+interface HistoricalEventOption {
+    year: number
+    title: string
+    title_en?: string
+}
+
 const EventPodcasts: React.FC = () => {
     const [rows, setRows] = useState<EventPodcastRow[]>([])
+    const [allEvents, setAllEvents] = useState<HistoricalEventOption[]>([])
     const [formData, setFormData] = useState<{
         event_year: number
         event_title: string
@@ -35,29 +41,28 @@ const EventPodcasts: React.FC = () => {
     const [loading, setLoading] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
 
-    // Get unique events from KEY_EVENTS, sorted by year
-    const uniqueEvents = React.useMemo(() => {
-        const seen = new Set<string>()
-        return KEY_EVENTS
-            .filter(e => {
-                const key = `${e.year}:${e.title}`
-                if (seen.has(key)) return false
-                seen.add(key)
-                return true
-            })
-            .sort((a, b) => a.year - b.year)
-    }, [])
+    // Fetch all events from Supabase historical_events table
+    const fetchAllEvents = async () => {
+        if (!supabase) return
+        const { data } = await supabase
+            .from('historical_events')
+            .select('year, title, title_en')
+            .order('year', { ascending: true })
+        if (data) {
+            setAllEvents(data.map(e => ({ year: e.year, title: e.title, title_en: e.title_en })))
+        }
+    }
 
     // Filter events by search query
     const filteredEvents = React.useMemo(() => {
-        if (!searchQuery.trim()) return uniqueEvents
+        if (!searchQuery.trim()) return allEvents
         const q = searchQuery.toLowerCase()
-        return uniqueEvents.filter(e =>
+        return allEvents.filter(e =>
             e.title.toLowerCase().includes(q) ||
-            e.titleEn?.toLowerCase().includes(q) ||
+            e.title_en?.toLowerCase().includes(q) ||
             String(e.year).includes(q)
         )
-    }, [searchQuery, uniqueEvents])
+    }, [searchQuery, allEvents])
 
     const refresh = async () => {
         if (!supabase) return
@@ -68,7 +73,10 @@ const EventPodcasts: React.FC = () => {
         setRows(data || [])
     }
 
-    useEffect(() => { refresh() }, [])
+    useEffect(() => {
+        refresh()
+        fetchAllEvents()
+    }, [])
 
     const save = async () => {
         if (!supabase) return
@@ -196,8 +204,8 @@ const EventPodcasts: React.FC = () => {
                                     <span className="text-amber-600 font-medium">{formatYear(event.year)}</span>
                                     <span className="mx-2 text-stone-300">|</span>
                                     <span className="text-stone-700">{event.title}</span>
-                                    {event.titleEn && (
-                                        <span className="text-stone-400 text-sm ml-2">({event.titleEn})</span>
+                                    {event.title_en && (
+                                        <span className="text-stone-400 text-sm ml-2">({event.title_en})</span>
                                     )}
                                 </button>
                             ))}
