@@ -3,6 +3,7 @@ import * as d3 from 'd3';
 import { useTranslation } from 'react-i18next';
 import { getDynastyPower } from '../data/historyData';
 import { Dynasty, Viewport, HistoricalEvent } from '../types';
+import { fetchEventsWithPodcasts } from '../services/eventPodcastService';
 
 interface OverviewCanvasProps {
     width: number;
@@ -97,8 +98,14 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
     const draggingRef = useRef<{ country: string, startY: number, originalIndex: number, offset: number } | null>(null);
     const [draggingCountry, setDraggingCountry] = useState<string | null>(null);
     const [dragOffset, setDragOffset] = useState(0);
+    const [eventsWithPodcasts, setEventsWithPodcasts] = useState<Set<string>>(new Set());
 
     const { t, i18n } = useTranslation();
+
+    // Fetch events that have podcasts on mount
+    useEffect(() => {
+        fetchEventsWithPodcasts().then(setEventsWithPodcasts);
+    }, []);
 
     // Scales
     const xScale = useMemo(() => d3.scaleLinear()
@@ -583,6 +590,13 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                                 >
                                                     {node.title}
                                                 </text>
+                                                {/* Play icon for events with podcasts */}
+                                                {eventsWithPodcasts.has(`${node.event.year}:${node.event.title}`) && (
+                                                    <g transform={`translate(${(node.width / 2) - 12}, 0)`}>
+                                                        <circle cx="0" cy="0" r="7" fill="#d97706" opacity="0.9" />
+                                                        <path d="M-2,-3 L3,0 L-2,3 Z" fill="white" />
+                                                    </g>
+                                                )}
                                             </g>
                                         </g>
                                     );
