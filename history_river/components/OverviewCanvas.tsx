@@ -809,7 +809,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                             borderRadius: '8px 8px 0 0',
                             boxShadow: '0 -4px 12px rgba(0,0,0,0.15)',
                             padding: 12,
-                            width: 220
+                            width: 330
                         }}>
                             <img
                                 src="/book-collection-qr.png"
@@ -865,7 +865,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                             borderRadius: '8px 8px 0 0',
                             boxShadow: '0 -4px 12px rgba(0,0,0,0.15)',
                             padding: 12,
-                            width: 220
+                            width: 330
                         }}>
                             <img
                                 src="/tip-qr.jpg"
@@ -927,7 +927,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                 maxHeight: 500,
                                 overflowY: 'auto',
                                 boxShadow: '0 -4px 12px rgba(0,0,0,0.15)',
-                                width: 280
+                                width: 420
                             }}
                         >
                             {allPodcasts.map((podcast, idx) => (
