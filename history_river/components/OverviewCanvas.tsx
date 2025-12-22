@@ -2,8 +2,8 @@ import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react'
 import * as d3 from 'd3';
 import { useTranslation } from 'react-i18next';
 import { getDynastyPower } from '../data/historyData';
-import { Dynasty, Viewport, HistoricalEvent } from '../types';
-import { fetchEventsWithPodcasts } from '../services/eventPodcastService';
+import { Dynasty, Viewport, HistoricalEvent, EventPodcast } from '../types';
+import { fetchEventsWithPodcasts, fetchAllEventPodcasts } from '../services/eventPodcastService';
 
 interface OverviewCanvasProps {
     width: number;
@@ -99,12 +99,15 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
     const [draggingCountry, setDraggingCountry] = useState<string | null>(null);
     const [dragOffset, setDragOffset] = useState(0);
     const [eventsWithPodcasts, setEventsWithPodcasts] = useState<Set<string>>(new Set());
+    const [allPodcasts, setAllPodcasts] = useState<EventPodcast[]>([]);
+    const [podcastListExpanded, setPodcastListExpanded] = useState(false);
 
     const { t, i18n } = useTranslation();
 
     // Fetch events that have podcasts on mount
     useEffect(() => {
         fetchEventsWithPodcasts().then(setEventsWithPodcasts);
+        fetchAllEventPodcasts().then(setAllPodcasts);
     }, []);
 
     // Scales
@@ -727,6 +730,110 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                 }
 
             </svg>
+
+            {/* Podcast Counter - Bottom Right */}
+            <div
+                style={{
+                    position: 'absolute',
+                    bottom: 16,
+                    right: 16,
+                    zIndex: 100
+                }}
+            >
+                {/* Counter Badge */}
+                <button
+                    onClick={() => setPodcastListExpanded(!podcastListExpanded)}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '8px 16px',
+                        backgroundColor: '#d97706',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: podcastListExpanded ? '8px 8px 0 0' : 8,
+                        cursor: 'pointer',
+                        fontSize: 14,
+                        fontWeight: 600,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                    </svg>
+                    <span>已上线播客 ({allPodcasts.length})</span>
+                    <svg
+                        width="12" height="12"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        style={{ transform: podcastListExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
+                    >
+                        <path d="M7 10l5 5 5-5z" />
+                    </svg>
+                </button>
+
+                {/* Expandable List */}
+                {podcastListExpanded && allPodcasts.length > 0 && (
+                    <div
+                        style={{
+                            backgroundColor: 'white',
+                            border: '1px solid #e5e5e5',
+                            borderTop: 'none',
+                            borderRadius: '0 0 8px 8px',
+                            maxHeight: 300,
+                            overflowY: 'auto',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                        }}
+                    >
+                        {allPodcasts.map((podcast, idx) => (
+                            <div
+                                key={podcast.id || idx}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    padding: '10px 12px',
+                                    borderBottom: idx < allPodcasts.length - 1 ? '1px solid #f0f0f0' : 'none',
+                                    fontSize: 13
+                                }}
+                            >
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ color: '#d97706', fontWeight: 600, fontSize: 12 }}>
+                                        {podcast.eventYear < 0 ? `公元前${Math.abs(podcast.eventYear)}年` : `公元${podcast.eventYear}年`}
+                                    </div>
+                                    <div style={{ color: '#374151', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {podcast.eventTitle}
+                                    </div>
+                                    <div style={{ color: '#9ca3af', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        <span>《{podcast.bookTitle}》</span>
+                                        {podcast.doubanRating && (
+                                            <span style={{ color: '#22c55e' }}>★ {podcast.doubanRating}</span>
+                                        )}
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => window.open(`/player.html?episode=${podcast.podcastUuid}`, '_blank')}
+                                    style={{
+                                        padding: '6px 12px',
+                                        backgroundColor: '#d97706',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: 6,
+                                        cursor: 'pointer',
+                                        fontSize: 12,
+                                        fontWeight: 500,
+                                        marginLeft: 8,
+                                        flexShrink: 0
+                                    }}
+                                >
+                                    播放
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
