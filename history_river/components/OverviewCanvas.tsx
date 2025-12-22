@@ -399,6 +399,24 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                 style={{ transition: isDragging ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0, 0.2, 1)' }}
                                 transform={`translate(0, ${yTranslate})`}
                             >
+                                {/* Track border lines - top and bottom */}
+                                <line
+                                    x1={xScale(DATA_START_YEAR)}
+                                    y1={-ROW_HEIGHT / 2}
+                                    x2={xScale(DATA_END_YEAR)}
+                                    y2={-ROW_HEIGHT / 2}
+                                    stroke="#e5e5e5"
+                                    strokeWidth={0.5}
+                                />
+                                <line
+                                    x1={xScale(DATA_START_YEAR)}
+                                    y1={ROW_HEIGHT / 2}
+                                    x2={xScale(DATA_END_YEAR)}
+                                    y2={ROW_HEIGHT / 2}
+                                    stroke="#e5e5e5"
+                                    strokeWidth={0.5}
+                                />
+
                                 {/* River Paths */}
                                 {series.map(layer => {
                                     const dynasty = countryDynasties.find(d => d.id === layer.key);
