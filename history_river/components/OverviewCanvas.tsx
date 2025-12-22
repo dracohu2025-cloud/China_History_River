@@ -105,10 +105,26 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
 
     const { t, i18n } = useTranslation();
 
+    // Ref for bottom buttons container to detect outside clicks
+    const bottomButtonsRef = useRef<HTMLDivElement>(null);
+
     // Fetch events that have podcasts on mount
     useEffect(() => {
         fetchEventsWithPodcasts().then(setEventsWithPodcasts);
         fetchAllEventPodcasts().then(setAllPodcasts);
+    }, []);
+
+    // Close popups when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (bottomButtonsRef.current && !bottomButtonsRef.current.contains(e.target as Node)) {
+                setShowBookCollectionModal(false);
+                setShowTipModal(false);
+                setPodcastListExpanded(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     // Scales
@@ -739,6 +755,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
 
             {/* Podcast Counter & Action Buttons - Bottom Right */}
             <div
+                ref={bottomButtonsRef}
                 style={{
                     position: 'absolute',
                     bottom: 16,
