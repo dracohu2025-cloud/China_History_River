@@ -186,8 +186,8 @@ const EventPodcasts: React.FC = () => {
 
                     {/* Event Dropdown */}
                     {searchQuery && !formData.event_title && (
-                        <div className="mt-1 max-h-48 overflow-y-auto border border-stone-200 rounded-lg bg-white shadow-lg">
-                            {filteredEvents.slice(0, 20).map(event => (
+                        <div className="mt-1 max-h-96 overflow-y-auto border border-stone-200 rounded-lg bg-white shadow-lg">
+                            {filteredEvents.slice(0, 100).map(event => (
                                 <button
                                     key={`${event.year}-${event.title}`}
                                     onClick={() => selectEvent(event)}
@@ -204,9 +204,9 @@ const EventPodcasts: React.FC = () => {
                             {filteredEvents.length === 0 && (
                                 <div className="px-4 py-3 text-stone-400 text-center">未找到匹配的事件</div>
                             )}
-                            {filteredEvents.length > 20 && (
+                            {filteredEvents.length > 100 && (
                                 <div className="px-4 py-2 text-stone-400 text-sm text-center border-t">
-                                    还有 {filteredEvents.length - 20} 个结果，请输入更精确的关键词
+                                    还有 {filteredEvents.length - 100} 个结果，请输入更精确的关键词
                                 </div>
                             )}
                         </div>
