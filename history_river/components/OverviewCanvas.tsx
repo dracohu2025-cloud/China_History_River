@@ -784,7 +784,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                             fontSize: 13,
                             fontWeight: 600,
                             boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                            transition: 'all 0.2s'
+                            transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
                         }}
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -840,7 +840,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                             fontSize: 13,
                             fontWeight: 600,
                             boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                            transition: 'all 0.2s'
+                            transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
                         }}
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -898,7 +898,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                             fontSize: 14,
                             fontWeight: 600,
                             boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                            transition: 'all 0.2s'
+                            transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
                         }}
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
