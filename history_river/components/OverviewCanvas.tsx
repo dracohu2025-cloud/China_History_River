@@ -741,8 +741,8 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                     right: 16,
                     zIndex: 100,
                     display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-end',
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
                     gap: 8
                 }}
             >
