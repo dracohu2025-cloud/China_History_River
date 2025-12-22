@@ -459,17 +459,22 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                         const events = allEvents ? allEvents[country] : null;
                         if (!events) return null;
 
-                        // 1. Filter events (Semantic Zoom)
-                        const relevantEvents = events.filter(ev => {
-                            if (ev.importance === 1) return true;
-                            if (viewport.k <= 0.1) return false;
-                            if (viewport.k < 0.3 && ev.importance > 1) return false;
-                            if (viewport.k < 0.8 && ev.importance > 2) return false;
-                            if (viewport.k < 2.0 && ev.importance > 3) return false;
-                            if (viewport.k < 3.5 && ev.importance > 4) return false;
-                            if (viewport.k < 6.0 && ev.importance > 5) return false;
-                            return true;
-                        });
+                        // 1. Filter events based on zoom level (Semantic Zoom)
+                        // 5-tier system: zoom more = show more detail
+                        // Tier 1 (k < 0.15): importance 1 only
+                        // Tier 2 (k < 0.3): importance 1-2
+                        // Tier 3 (k < 0.6): importance 1-3
+                        // Tier 4 (k < 1.5): importance 1-4
+                        // Tier 5 (k >= 1.5): all importance levels 1-5
+                        const getMaxImportance = (k: number): number => {
+                            if (k < 0.15) return 1;
+                            if (k < 0.3) return 2;
+                            if (k < 0.6) return 3;
+                            if (k < 1.5) return 4;
+                            return 5;
+                        };
+                        const maxImportance = getMaxImportance(viewport.k);
+                        const relevantEvents = events.filter(ev => ev.importance <= maxImportance);
 
                         if (relevantEvents.length === 0) return null;
 
