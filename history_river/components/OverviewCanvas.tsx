@@ -808,7 +808,7 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                                     <div style={{ color: '#9ca3af', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
                                         <span>《{podcast.bookTitle}》</span>
                                         {podcast.doubanRating && (
-                                            <span style={{ color: '#22c55e' }}>★ {podcast.doubanRating}</span>
+                                            <span style={{ color: '#22c55e' }}>★ {podcast.doubanRating.toFixed(1)}</span>
                                         )}
                                     </div>
                                 </div>
