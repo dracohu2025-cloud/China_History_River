@@ -87,10 +87,20 @@ const EventPodcasts: React.FC = () => {
             douban_rating: formData.douban_rating ? parseFloat(formData.douban_rating) : null
         }
 
+        let error = null
         if (editingId) {
-            await supabase.from('event_podcasts').update(payload).eq('id', editingId)
+            const result = await supabase.from('event_podcasts').update(payload).eq('id', editingId)
+            error = result.error
         } else {
-            await supabase.from('event_podcasts').insert(payload)
+            const result = await supabase.from('event_podcasts').insert(payload)
+            error = result.error
+        }
+
+        if (error) {
+            console.error('Save error:', error)
+            alert(`保存失败: ${error.message}\n\n如果是权限错误，请确保已登录管理员账户。`)
+            setLoading(false)
+            return
         }
 
         resetForm()
