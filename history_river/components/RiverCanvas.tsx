@@ -340,7 +340,6 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
 
       const bandIndex = Math.min(5, Math.max(1, ev.importance));
       const primaryLane = (ev.year % 2 === 0 ? 1 : -1) * bandIndex;
-      const secondaryLane = -primaryLane;
 
       const tryPlace = (laneVal: number) => {
         const ranges = occupiedLanes.get(laneVal) || [];
@@ -352,8 +351,30 @@ const RiverCanvas: React.FC<RiverCanvasProps> = ({ onEventSelect, width, height,
         return true;
       };
 
-      if (!tryPlace(primaryLane)) {
-        tryPlace(secondaryLane);
+      // Try multiple lanes: primary, then alternate lanes up to ±10
+      let placed = false;
+      const lanesToTry = [primaryLane, -primaryLane];
+
+      // Add more lanes to try at high zoom levels
+      const maxLanes = viewport.k > 1 ? 10 : (viewport.k > 0.5 ? 6 : 4);
+      for (let i = 1; i <= maxLanes && lanesToTry.length < maxLanes * 2; i++) {
+        lanesToTry.push(i, -i);
+      }
+
+      for (const lane of lanesToTry) {
+        if (tryPlace(lane)) {
+          placed = true;
+          break;
+        }
+      }
+
+      // At high zoom, always place event even if overlapping (use a unique lane)
+      if (!placed && viewport.k > 0.8) {
+        const fallbackLane = (ev.year * 7 + ev.title.length) % 20 - 10;
+        const ranges = occupiedLanes.get(fallbackLane) || [];
+        ranges.push({ start: startX, end: endX });
+        occupiedLanes.set(fallbackLane, ranges);
+        nodes.push({ event: ev, x: 0, yOffset: 0, lane: fallbackLane, width: boxWidth });
       }
     });
 
