@@ -495,18 +495,17 @@ const OverviewCanvas: React.FC<OverviewCanvasProps> = ({ width, height, allDynas
                         if (!events) return null;
 
                         // 1. Filter events based on zoom level (Semantic Zoom)
-                        // 5-tier system: zoom more = show more detail
-                        // Tier 1 (k < 0.15): importance 1 only
-                        // Tier 2 (k < 0.3): importance 1-2
-                        // Tier 3 (k < 0.6): importance 1-3
-                        // Tier 4 (k < 1.5): importance 1-4
-                        // Tier 5 (k >= 1.5): all importance levels 1-5
+                        // 10-tier importance system with 20 zoom levels
+                        // Zoom levels 1-2 → importance 1, zoom 3-4 → importance 1-2, etc.
+                        // MIN_ZOOM=0.05, MAX_ZOOM=10, using logarithmic scale for natural feel
                         const getMaxImportance = (k: number): number => {
-                            if (k < 0.15) return 1;
-                            if (k < 0.3) return 2;
-                            if (k < 0.6) return 3;
-                            if (k < 1.5) return 4;
-                            return 5;
+                            // Convert zoom scale to 1-20 range using log scale
+                            const minK = 0.05, maxK = 10;
+                            const logMin = Math.log(minK), logMax = Math.log(maxK);
+                            const logK = Math.log(Math.max(minK, Math.min(maxK, k)));
+                            const zoomLevel = Math.ceil(((logK - logMin) / (logMax - logMin)) * 20);
+                            // Every 2 zoom levels adds 1 importance tier
+                            return Math.min(10, Math.max(1, Math.ceil(zoomLevel / 2)));
                         };
                         const maxImportance = getMaxImportance(viewport.k);
                         const relevantEvents = events.filter(ev => ev.importance <= maxImportance);
