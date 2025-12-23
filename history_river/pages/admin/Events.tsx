@@ -27,6 +27,7 @@ const Events: React.FC = () => {
     const [loading, setLoading] = useState(false)
     const [editingId, setEditingId] = useState<number | null>(null)
     const [totalCount, setTotalCount] = useState(0)
+    const [showEditModal, setShowEditModal] = useState(false)
 
     // Pagination
     const [page, setPage] = useState(0)
@@ -34,7 +35,7 @@ const Events: React.FC = () => {
 
     // Form State
     const [formData, setFormData] = useState<Omit<HistoricalEvent, 'id'>>({
-        year: 0, title: '', event_type: 'politics', importance: 3, dynasty_id: '', description: '', source_reference: ''
+        year: 0, title: '', event_type: 'politics', importance: 5, dynasty_id: '', description: '', source_reference: ''
     })
 
     const fetchDynasties = async () => {
@@ -74,7 +75,8 @@ const Events: React.FC = () => {
 
         setLoading(false)
         setEditingId(null)
-        setFormData({ year: 0, title: '', event_type: 'politics', importance: 3, dynasty_id: '', description: '', source_reference: '' })
+        setShowEditModal(false)
+        setFormData({ year: 0, title: '', event_type: 'politics', importance: 5, dynasty_id: '', description: '', source_reference: '' })
         refresh()
     }
 
@@ -89,6 +91,13 @@ const Events: React.FC = () => {
             description: item.description || '',
             source_reference: item.source_reference || ''
         })
+        setShowEditModal(true)
+    }
+
+    const handleCloseModal = () => {
+        setShowEditModal(false)
+        setEditingId(null)
+        setFormData({ year: 0, title: '', event_type: 'politics', importance: 5, dynasty_id: '', description: '', source_reference: '' })
     }
 
     const handleDelete = async (id: number) => {
@@ -100,7 +109,7 @@ const Events: React.FC = () => {
     return (
         <div className="space-y-6">
             <div className="bg-white p-4 rounded shadow">
-                <h3 className="text-lg font-bold mb-4">{editingId ? '编辑事件' : '添加事件'}</h3>
+                <h3 className="text-lg font-bold mb-4">添加事件</h3>
                 <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="md:col-span-1">
                         <label className="block text-sm text-gray-600">年份</label>
@@ -111,9 +120,9 @@ const Events: React.FC = () => {
                         <input className="border w-full p-2 rounded" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} required />
                     </div>
                     <div>
-                        <label className="block text-sm text-gray-600">重要性 (1-5, 1最高)</label>
+                        <label className="block text-sm text-gray-600">重要性 (1-10, 1最高)</label>
                         <select className="border w-full p-2 rounded" value={formData.importance} onChange={e => setFormData({ ...formData, importance: parseInt(e.target.value) })}>
-                            {[1, 2, 3, 4, 5].map(v => <option key={v} value={v}>{v}</option>)}
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                     </div>
                     <div>
@@ -139,13 +148,8 @@ const Events: React.FC = () => {
 
                     <div className="md:col-span-4 flex gap-2">
                         <button type="submit" disabled={loading} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                            {loading ? '保存中...' : '保存'}
+                            {loading ? '保存中...' : '添加'}
                         </button>
-                        {editingId && (
-                            <button type="button" onClick={() => { setEditingId(null); setFormData({ year: 0, title: '', event_type: 'politics', importance: 3, dynasty_id: '', description: '', source_reference: '' }) }} className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">
-                                取消
-                            </button>
-                        )}
                     </div>
                 </form>
             </div>
@@ -203,6 +207,66 @@ const Events: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Edit Modal */}
+            {showEditModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                            <h3 className="text-lg font-bold">编辑事件</h3>
+                            <button onClick={handleCloseModal} className="text-gray-500 hover:text-gray-700 text-xl">&times;</button>
+                        </div>
+                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm text-gray-600 mb-1">年份</label>
+                                    <input type="number" className="border w-full p-2 rounded" value={formData.year} onChange={e => setFormData({ ...formData, year: parseInt(e.target.value) })} required />
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-gray-600 mb-1">重要性 (1-10, 1最高)</label>
+                                    <select className="border w-full p-2 rounded" value={formData.importance} onChange={e => setFormData({ ...formData, importance: parseInt(e.target.value) })}>
+                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => <option key={v} value={v}>{v}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm text-gray-600 mb-1">标题</label>
+                                <input className="border w-full p-2 rounded" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} required />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm text-gray-600 mb-1">类型</label>
+                                    <select className="border w-full p-2 rounded" value={formData.event_type} onChange={e => setFormData({ ...formData, event_type: e.target.value })}>
+                                        <option value="politics">政治</option>
+                                        <option value="war">战争</option>
+                                        <option value="culture">文化</option>
+                                        <option value="science">科技</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-gray-600 mb-1">所属朝代</label>
+                                    <select className="border w-full p-2 rounded" value={formData.dynasty_id} onChange={e => setFormData({ ...formData, dynasty_id: e.target.value })}>
+                                        <option value="">-- 无/未知 --</option>
+                                        {dynasties.map(d => <option key={d.id} value={d.id}>{d.chinese_name}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm text-gray-600 mb-1">描述</label>
+                                <textarea className="border w-full p-2 rounded" rows={3} value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                            </div>
+                            <div className="flex gap-2 pt-4 border-t">
+                                <button type="submit" disabled={loading} className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+                                    {loading ? '保存中...' : '保存修改'}
+                                </button>
+                                <button type="button" onClick={handleCloseModal} className="bg-gray-400 text-white px-6 py-2 rounded hover:bg-gray-500">
+                                    取消
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
