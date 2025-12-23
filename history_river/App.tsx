@@ -6,8 +6,6 @@ import DetailModal from './components/DetailModal';
 import PodcastPlayerModal from './components/PodcastPlayerModal';
 import { HistoricalEvent, Dynasty, RiverPin } from './types';
 import { fetchDynasties, fetchEvents, fetchRiverPins } from './services/dataService';
-import { DYNASTIES as FALLBACK_DYNASTIES, KEY_EVENTS as FALLBACK_EVENTS } from './data/historyData';
-import { WORLD_HISTORY } from './data/worldHistory';
 
 const COUNTRIES = [
   { code: 'overview', emoji: '🌎' },
@@ -37,8 +35,8 @@ const App: React.FC = () => {
   const [selectedCountry, setSelectedCountry] = useState<string>('overview');
   const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
 
-  const [dynasties, setDynasties] = useState<Dynasty[]>(FALLBACK_DYNASTIES);
-  const [events, setEvents] = useState<HistoricalEvent[]>(FALLBACK_EVENTS);
+  const [dynasties, setDynasties] = useState<Dynasty[]>([]);
+  const [events, setEvents] = useState<HistoricalEvent[]>([]);
   const [pins, setPins] = useState<RiverPin[]>([]);
   const [allDynasties, setAllDynasties] = useState<{ [code: string]: Dynasty[] }>({});
   const [allEvents, setAllEvents] = useState<{ [code: string]: HistoricalEvent[] }>({});
@@ -86,21 +84,10 @@ const App: React.FC = () => {
         const newAllEvents: { [code: string]: HistoricalEvent[] } = {};
 
         targetCountries.forEach((c, idx) => {
-          let d = dynastyResults[idx];
-          let e = eventResults[idx];
-
-          if (!d || d.length === 0) {
-            if (c.code === 'china') d = FALLBACK_DYNASTIES;
-            else if (WORLD_HISTORY[c.code]) d = WORLD_HISTORY[c.code].dynasties;
-          }
-
-          if (!e || e.length === 0) {
-            if (c.code === 'china') e = FALLBACK_EVENTS;
-            else if (WORLD_HISTORY[c.code]) e = WORLD_HISTORY[c.code].events;
-          }
-
-          newAllDynasties[c.code] = d || [];
-          newAllEvents[c.code] = e || [];
+          const d = dynastyResults[idx] || [];
+          const e = eventResults[idx] || [];
+          newAllDynasties[c.code] = d;
+          newAllEvents[c.code] = e;
         });
 
         setAllDynasties(newAllDynasties);
@@ -111,26 +98,9 @@ const App: React.FC = () => {
           fetchDynasties(selectedCountry),
           fetchEvents(selectedCountry)
         ]);
-        // For China, we might have fallbacks. For others, allow empty and CLEAR state if empty.
-        if (d.length > 0) {
-          setDynasties(d);
-        } else if (selectedCountry === 'china') {
-          setDynasties(FALLBACK_DYNASTIES);
-        } else if (WORLD_HISTORY[selectedCountry]) {
-          setDynasties(WORLD_HISTORY[selectedCountry].dynasties);
-        } else {
-          setDynasties([]);
-        }
-
-        if (e.length > 0) {
-          setEvents(e);
-        } else if (selectedCountry === 'china') {
-          setEvents(FALLBACK_EVENTS);
-        } else if (WORLD_HISTORY[selectedCountry]) {
-          setEvents(WORLD_HISTORY[selectedCountry].events);
-        } else {
-          setEvents([]);
-        }
+        // For single country mode - use database data only
+        setDynasties(d);
+        setEvents(e);
 
         // Pins removed as per request
         setPins([]);
