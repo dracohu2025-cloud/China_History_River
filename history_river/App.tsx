@@ -15,9 +15,6 @@ const COUNTRIES = [
   { code: 'france', emoji: '🇫🇷' },
   { code: 'germany', emoji: '🇩🇪' },
   { code: 'russia', emoji: '🇷🇺' },
-  { code: 'poland', emoji: '🇵🇱' },
-  { code: 'greece', emoji: '🇬🇷' },
-  { code: 'italy', emoji: '🇮🇹' },
   { code: 'india', emoji: '🇮🇳' },
   { code: 'japan', emoji: '🇯🇵' },
 ];
