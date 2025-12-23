@@ -103,7 +103,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
         style={{
           position: 'relative',
           width: '90%', // Mobile friendly default
-          maxWidth: '520px', // slightly tighter max-width
+          maxWidth: podcasts.length > 0 ? '900px' : '520px', // Wider when podcasts exist
           maxHeight: '80vh',
           opacity: 1,
           transform: 'none',
@@ -167,173 +167,183 @@ const DetailModal: React.FC<DetailModalProps> = ({ year, event, onClose }) => {
           </button>
         </div>
 
-        {/* Content */}
+        {/* Main Content Area - Side by side when podcasts exist */}
         <div style={{
-          padding: '24px 24px 16px 24px', // Tighter bottom padding
-          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: podcasts.length > 0 ? 'row' : 'column',
           flex: 1,
+          overflow: 'hidden',
         }}>
-          {/* Year Display */}
+          {/* Content */}
           <div style={{
-            marginBottom: '12px',
-            display: 'flex',
-            alignItems: 'center',
+            padding: '24px 24px 16px 24px', // Tighter bottom padding
+            overflowY: 'auto',
+            flex: podcasts.length > 0 ? '1 1 55%' : 1,
+            borderRight: podcasts.length > 0 ? '1px solid rgba(0,0,0,0.06)' : 'none',
           }}>
-            <span style={{
-              fontSize: '2.5rem', // Large, elegant year
-              fontWeight: '800',
-              color: '#d97706', // amber-600
-              fontFamily: "'Playfair Display', serif", // Fallback to serif for date creates nice contrast
-              lineHeight: 1,
-              opacity: 0.9,
-            }}>
-              {Math.abs(year)}
-            </span>
-            <span style={{
-              marginLeft: '6px',
-              fontSize: '1rem',
-              fontWeight: '600',
-              color: '#d97706',
-              opacity: 0.6,
-              marginTop: '8px', // Align with baseline
-            }}>
-              {year < 0 ? 'B.C.' : 'A.D.'}
-            </span>
-          </div>
-
-          <div style={{
-            fontSize: '0.95rem',
-            color: '#444',
-            lineHeight: 1.75,
-            letterSpacing: '0.01em',
-          }}>
-            {loading ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0', gap: '12px' }}>
-                <div className="animate-spin" style={{
-                  width: '32px',
-                  height: '32px',
-                  border: '3px solid rgba(217, 119, 6, 0.2)',
-                  borderTopColor: '#d97706',
-                  borderRadius: '50%',
-                  animation: 'spin 0.8s linear infinite'
-                }}></div>
-                <p style={{ color: '#999', fontSize: '0.875rem' }}>{t('app.loading')}</p>
-                <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-              </div>
-            ) : (
-              content.split('\n').map((paragraph, idx) => (
-                paragraph.trim() && <p key={idx} style={{ marginBottom: '16px', textAlign: 'justify' }}>{paragraph}</p>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Podcast Section */}
-        {podcasts.length > 0 && (
-          <div style={{
-            padding: '16px 24px',
-            backgroundColor: '#fffbeb',
-            borderTop: '1px solid #fef3c7',
-          }}>
+            {/* Year Display */}
             <div style={{
+              marginBottom: '12px',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              marginBottom: '12px',
             }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#d97706">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM9.5 16.5v-9l7 4.5-7 4.5z" />
-              </svg>
               <span style={{
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#92400e',
+                fontSize: '2.5rem', // Large, elegant year
+                fontWeight: '800',
+                color: '#d97706', // amber-600
+                fontFamily: "'Playfair Display', serif", // Fallback to serif for date creates nice contrast
+                lineHeight: 1,
+                opacity: 0.9,
               }}>
-                {lang.startsWith('zh') ? '相关播客' : 'Related Podcasts'}
+                {Math.abs(year)}
+              </span>
+              <span style={{
+                marginLeft: '6px',
+                fontSize: '1rem',
+                fontWeight: '600',
+                color: '#d97706',
+                opacity: 0.6,
+                marginTop: '8px', // Align with baseline
+              }}>
+                {year < 0 ? 'B.C.' : 'A.D.'}
               </span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {podcasts.map((podcast) => (
-                <div
-                  key={podcast.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '12px 14px',
-                    backgroundColor: 'white',
-                    borderRadius: '12px',
-                    border: '1px solid #fed7aa',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontSize: '0.9rem',
-                      fontWeight: '600',
-                      color: '#1f2937',
-                      marginBottom: '4px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {podcast.bookTitle}
-                    </div>
-                    {podcast.doubanRating && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}>
-                        <span style={{ color: '#f59e0b', fontSize: '12px' }}>★</span>
-                        <span style={{
-                          fontSize: '0.75rem',
-                          fontWeight: '500',
-                          color: '#78716c',
-                        }}>
-                          {lang.startsWith('zh') ? '豆瓣' : 'Douban'} {podcast.doubanRating}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => {
-                      window.open(`/player.html?episode=${podcast.podcastUuid}`, '_blank');
-                    }}
+
+            <div style={{
+              fontSize: '0.95rem',
+              color: '#444',
+              lineHeight: 1.75,
+              letterSpacing: '0.01em',
+            }}>
+              {loading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0', gap: '12px' }}>
+                  <div className="animate-spin" style={{
+                    width: '32px',
+                    height: '32px',
+                    border: '3px solid rgba(217, 119, 6, 0.2)',
+                    borderTopColor: '#d97706',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite'
+                  }}></div>
+                  <p style={{ color: '#999', fontSize: '0.875rem' }}>{t('app.loading')}</p>
+                  <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+                </div>
+              ) : (
+                content.split('\n').map((paragraph, idx) => (
+                  paragraph.trim() && <p key={idx} style={{ marginBottom: '16px', textAlign: 'justify' }}>{paragraph}</p>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Podcast Section - Right side when podcasts exist */}
+          {podcasts.length > 0 && (
+            <div style={{
+              flex: '1 1 45%',
+              padding: '24px 20px',
+              backgroundColor: '#fffbeb',
+              overflowY: 'auto',
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '16px',
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#d97706">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM9.5 16.5v-9l7 4.5-7 4.5z" />
+                </svg>
+                <span style={{
+                  fontSize: '0.95rem',
+                  fontWeight: '700',
+                  color: '#92400e',
+                }}>
+                  {lang.startsWith('zh') ? '相关播客' : 'Related Podcasts'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {podcasts.map((podcast) => (
+                  <div
+                    key={podcast.id}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px',
-                      padding: '8px 14px',
-                      backgroundColor: '#d97706',
-                      border: 'none',
-                      color: 'white',
-                      fontWeight: '600',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '0.8rem',
-                      transition: 'all 0.15s',
-                      flexShrink: 0,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#b45309';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#d97706';
-                      e.currentTarget.style.transform = 'none';
+                      justifyContent: 'space-between',
+                      padding: '12px 14px',
+                      backgroundColor: 'white',
+                      borderRadius: '12px',
+                      border: '1px solid #fed7aa',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                     }}
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                    {lang.startsWith('zh') ? '播放' : 'Play'}
-                  </button>
-                </div>
-              ))}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: '0.9rem',
+                        fontWeight: '600',
+                        color: '#1f2937',
+                        marginBottom: '4px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {podcast.bookTitle}
+                      </div>
+                      {podcast.doubanRating && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}>
+                          <span style={{ color: '#f59e0b', fontSize: '12px' }}>★</span>
+                          <span style={{
+                            fontSize: '0.75rem',
+                            fontWeight: '500',
+                            color: '#78716c',
+                          }}>
+                            {lang.startsWith('zh') ? '豆瓣' : 'Douban'} {podcast.doubanRating}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        window.open(`/player.html?episode=${podcast.podcastUuid}`, '_blank');
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 14px',
+                        backgroundColor: '#d97706',
+                        border: 'none',
+                        color: 'white',
+                        fontWeight: '600',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        transition: 'all 0.15s',
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#b45309';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#d97706';
+                        e.currentTarget.style.transform = 'none';
+                      }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                      {lang.startsWith('zh') ? '播放' : 'Play'}
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Footer */}
         <div style={{
