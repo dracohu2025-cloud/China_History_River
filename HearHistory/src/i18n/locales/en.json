@@ -1,0 +1,112 @@
+{
+  "en": {
+    "common": {
+      "loading": "Loading...",
+      "error": "Failed to load",
+      "retry": "Retry",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "delete": "Delete",
+      "save": "Save",
+      "close": "Close",
+      "back": "Back"
+    },
+    "tabs": {
+      "home": "Home",
+      "timeline": "Timeline",
+      "downloads": "Downloads",
+      "settings": "Settings"
+    },
+    "home": {
+      "title": "Hear History",
+      "subtitle": "FM 88.0 - 108.0 | 5000 Years Journey",
+      "continueListening": "Continue Listening",
+      "browseByDynasty": "Browse by Dynasty",
+      "latestEpisodes": "Latest Episodes",
+      "podcasts": "podcasts",
+      "dynasties": "dynasties",
+      "yearsHistory": "years of history"
+    },
+    "timeline": {
+      "title": "Historical Timeline",
+      "events": "events",
+      "noEvents": "No historical events"
+    },
+    "player": {
+      "nowPlaying": "Now Playing",
+      "tuning": "Tuning...",
+      "transcript": "Transcript",
+      "tapToJump": "Tap to jump",
+      "speed": "Speed",
+      "maleHost": "Male Host",
+      "femaleHost": "Female Host"
+    },
+    "downloads": {
+      "title": "My Downloads",
+      "storage": "Storage",
+      "downloading": "Downloading",
+      "downloaded": "Downloaded",
+      "noDownloads": "No downloads yet",
+      "offlineHint": "Tap download button on player\nto listen offline",
+      "clear": "Clear",
+      "confirmDelete": "Are you sure you want to delete \"{{title}}\"?",
+      "confirmClear": "Are you sure you want to clear all completed downloads? Audio files will be deleted."
+    },
+    "settings": {
+      "title": "Settings",
+      "appearance": "Appearance",
+      "language": "Language",
+      "theme": "Theme",
+      "themeSystem": "System",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "playerStyle": "Player Visual Style",
+      "playback": "Playback",
+      "defaultSpeed": "Default Speed",
+      "showTranscript": "Show Transcript",
+      "download": "Download",
+      "autoDownload": "Auto download on WiFi",
+      "about": "About",
+      "version": "Version",
+      "feedback": "Feedback",
+      "license": "Open Source License",
+      "dataManagement": "Data Management",
+      "clearHistory": "Clear Playback History",
+      "resetSettings": "Reset to Defaults"
+    },
+    "dynasty": {
+      "xia": "Xia",
+      "shang": "Shang",
+      "zhou": "Zhou",
+      "qin": "Qin",
+      "han": "Han",
+      "jin": "Jin",
+      "sui": "Sui",
+      "tang": "Tang",
+      "song": "Song",
+      "yuan": "Yuan",
+      "ming": "Ming",
+      "qing": "Qing",
+      "modern": "Modern"
+    },
+    "eventType": {
+      "war": "War",
+      "culture": "Culture",
+      "politics": "Politics",
+      "science": "Science"
+    },
+    "visualStyle": {
+      "fm-radio": "FM Radio",
+      "cassette": "Cassette Deck",
+      "liquid-glass": "Liquid Glass",
+      "vinyl": "Vinyl Turntable",
+      "ocean": "Audio Ocean",
+      "cosmic": "Cosmic Particles",
+      "ink-wash": "Ink Wash",
+      "neon-spectrum": "Neon Spectrum",
+      "hourglass": "Time Hourglass",
+      "shadow-puppet": "Shadow Puppet",
+      "minimal-ring": "Minimal Ring"
+    }
+  }
+}

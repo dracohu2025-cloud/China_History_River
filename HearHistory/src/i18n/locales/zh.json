@@ -1,0 +1,112 @@
+{
+  "zh": {
+    "common": {
+      "loading": "加载中...",
+      "error": "加载失败",
+      "retry": "重试",
+      "cancel": "取消",
+      "confirm": "确认",
+      "delete": "删除",
+      "save": "保存",
+      "close": "关闭",
+      "back": "返回"
+    },
+    "tabs": {
+      "home": "首页",
+      "timeline": "时间线",
+      "downloads": "下载",
+      "settings": "设置"
+    },
+    "home": {
+      "title": "听见历史",
+      "subtitle": "FM 88.0 - 108.0 | 穿越五千年",
+      "continueListening": "继续收听",
+      "browseByDynasty": "按朝代浏览",
+      "latestEpisodes": "最新上线",
+      "podcasts": "期播客",
+      "dynasties": "个朝代",
+      "yearsHistory": "年历史"
+    },
+    "timeline": {
+      "title": "历史时间线",
+      "events": "事件",
+      "noEvents": "暂无历史事件"
+    },
+    "player": {
+      "nowPlaying": "正在播放",
+      "tuning": "调频中...",
+      "transcript": "文稿",
+      "tapToJump": "点击跳转",
+      "speed": "倍速",
+      "maleHost": "男主播",
+      "femaleHost": "女主播"
+    },
+    "downloads": {
+      "title": "我的下载",
+      "storage": "存储空间",
+      "downloading": "下载中",
+      "downloaded": "已下载",
+      "noDownloads": "暂无下载内容",
+      "offlineHint": "在播放页面点击下载按钮\n即可离线收听",
+      "clear": "清除",
+      "confirmDelete": "确定要删除「{{title}}」吗？",
+      "confirmClear": "确定要清除所有已完成的下载记录吗？音频文件将被删除。"
+    },
+    "settings": {
+      "title": "设置",
+      "appearance": "外观",
+      "language": "语言",
+      "theme": "主题",
+      "themeSystem": "跟随系统",
+      "themeLight": "浅色",
+      "themeDark": "深色",
+      "playerStyle": "播放器视觉风格",
+      "playback": "播放",
+      "defaultSpeed": "默认播放速度",
+      "showTranscript": "显示文稿",
+      "download": "下载",
+      "autoDownload": "WiFi 下自动下载",
+      "about": "关于",
+      "version": "版本",
+      "feedback": "反馈问题",
+      "license": "开源许可",
+      "dataManagement": "数据管理",
+      "clearHistory": "清除播放历史",
+      "resetSettings": "恢复默认设置"
+    },
+    "dynasty": {
+      "xia": "夏",
+      "shang": "商",
+      "zhou": "周",
+      "qin": "秦",
+      "han": "汉",
+      "jin": "晋",
+      "sui": "隋",
+      "tang": "唐",
+      "song": "宋",
+      "yuan": "元",
+      "ming": "明",
+      "qing": "清",
+      "modern": "近现代"
+    },
+    "eventType": {
+      "war": "战争",
+      "culture": "文化",
+      "politics": "政治",
+      "science": "科技"
+    },
+    "visualStyle": {
+      "fm-radio": "FM 收音机",
+      "cassette": "复古磁带机",
+      "liquid-glass": "液态玻璃",
+      "vinyl": "黑胶唱片",
+      "ocean": "声波海洋",
+      "cosmic": "星空粒子",
+      "ink-wash": "水墨山水",
+      "neon-spectrum": "霓虹频谱",
+      "hourglass": "时光沙漏",
+      "shadow-puppet": "皮影戏剧场",
+      "minimal-ring": "极简呼吸环"
+    }
+  }
+}
