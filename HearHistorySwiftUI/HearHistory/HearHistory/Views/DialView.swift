@@ -8,8 +8,15 @@ struct DialView: View {
     private let minFreq: Double = 88.0
     private let maxFreq: Double = 108.0
 
+    private let minYear: Double = -2070.0
+    private let maxYear: Double = 2025.0
+
     var body: some View {
         GeometryReader { geometry in
+            let width = geometry.size.width.isFinite ? max(0, geometry.size.width) : 0
+            let height = geometry.size.height.isFinite ? max(0, geometry.size.height) : 0
+            let safeSize = CGSize(width: width, height: height)
+            
             ZStack {
                 // 玻璃罩背景
                 RoundedRectangle(cornerRadius: 10)
@@ -18,7 +25,7 @@ struct DialView: View {
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(RadioColors.brass, lineWidth: 3)
                     )
-
+                
                 // 玻璃反光效果
                 RoundedRectangle(cornerRadius: 10)
                     .fill(
@@ -34,18 +41,18 @@ struct DialView: View {
                     )
                     .mask(
                         Rectangle()
-                            .frame(height: geometry.size.height * 0.5)
+                            .frame(height: height * 0.5)
                     )
-
+                
                 // 刻度盘主体
-                dialFace
+                dialFace(size: safeSize)
                     .padding(4)
                     .background(
                         RoundedRectangle(cornerRadius: 6)
                             .fill(RadioColors.dial)
                     )
                     .padding(4)
-
+                
                 // 当前频率显示
                 VStack {
                     Spacer()
@@ -57,6 +64,7 @@ struct DialView: View {
                     .padding(.trailing, 8)
                 }
             }
+            .opacity(width > 0 && height > 0 ? 1 : 0) // 布局未准备好时隐藏
         }
         .onAppear {
             // 呼吸灯动画
@@ -66,165 +74,237 @@ struct DialView: View {
         }
     }
 
-    var dialFace: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // 暖光效果
-                Rectangle()
-                    .fill(RadioColors.glow)
-                    .opacity(glowOpacity * 0.1)
+    func dialFace(size: CGSize) -> some View {
+        // 计算内部可用尺寸 (padding 4 + 4 = 8)
+        let innerWidth = max(0, size.width - 8)
+        let innerHeight = max(0, size.height - 8)
+        
+        // Content width after horizontal padding of 10 on each side
+        let contentWidth = max(0, innerWidth - 20)
+        
+        return ZStack(alignment: .topLeading) {
+            // 暖光效果
+            Rectangle()
+                .fill(RadioColors.glow)
+                .opacity(glowOpacity * 0.1)
 
-                VStack(spacing: 4) {
-                    // 年份刻度
-                    yearScale
+            // 刻度尺层
+            VStack(spacing: 4) {
+                // 朝代刻度 (上层)
+                dynastyScale(width: contentWidth)
+                    .frame(height: 40)
+                    .padding(.horizontal, 10)
 
-                    // 朝代刻度
-                    dynastyScale
+                // 年份刻度线 (中层)
+                freqScale(width: contentWidth)
+                    .frame(height: 20)
+                    .padding(.horizontal, 10)
 
-                    // 频率刻度线
-                    freqScale
+                // 年份数字
+                freqNumbers(width: contentWidth)
+                    .frame(height: 20)
+                    .padding(.horizontal, 10)
+                
+                // 历史事件标记点 (下层)
+                eventDots(width: contentWidth)
+                    .frame(height: 10)
+                    .padding(.horizontal, 10)
+                    .padding(.top, 4)
 
-                    // 频率数字
-                    freqNumbers
-
-                    Spacer()
-
-                    // 指针
-                    needle
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                        .padding(.leading, 10)
-                }
-                .padding(.top, 6)
-            }
-        }
-    }
-
-    var yearScale: some View {
-        HStack {
-            Text("-2070").font(.system(size: 8)).foregroundColor(RadioColors.dialText.opacity(0.6))
-            Text("-1000").font(.system(size: 8)).foregroundColor(RadioColors.dialText.opacity(0.6))
-            Text("0").font(.system(size: 8)).foregroundColor(RadioColors.dialText.opacity(0.6))
-            Text("500").font(.system(size: 8)).foregroundColor(RadioColors.dialText.opacity(0.6))
-            Text("1000").font(.system(size: 8)).foregroundColor(RadioColors.dialText.opacity(0.6))
-            Text("1500").font(.system(size: 8)).foregroundColor(RadioColors.dialText.opacity(0.6))
-            Text("2025").font(.system(size: 8)).foregroundColor(RadioColors.dialText.opacity(0.6))
-            Spacer()
-        }
-        .padding(.horizontal, 10)
-    }
-
-    var dynastyScale: some View {
-        GeometryReader { geometry in
-            ZStack {
-                ForEach(DYNASTY_FREQUENCIES.filter { $0.id != "modern" }) { dynasty in
-                    let xPos = ((dynasty.frequency - minFreq) / (maxFreq - minFreq)) * geometry.size.width
-                    let isActive = abs(viewModel.currentFrequency - dynasty.frequency) < 1
-
-                    VStack(spacing: 1) {
-                        Rectangle()
-                            .fill(Color(hex: dynasty.color))
-                            .frame(width: 3, height: 10)
-                            .cornerRadius(1)
-
-                        Text(dynasty.chineseName)
-                            .font(.system(size: isActive ? 12 : 10))
-                            .fontWeight(isActive ? .bold : .medium)
-                            .foregroundColor(isActive ? RadioColors.needle : RadioColors.dialText)
-                    }
-                    .position(x: xPos, y: geometry.size.height / 2)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                            viewModel.jumpToDynasty(dynasty)
-                        }
-                    }
-                }
-            }
-            .frame(height: 36)
-            .padding(.horizontal, 10)
-        }
-        .frame(height: 40)
-    }
-
-    var freqScale: some View {
-        GeometryReader { geometry in
-            ZStack {
-                ForEach(0..<21) { i in
-                    let freq = minFreq + Double(i)
-                    let xPos = (Double(i) / 20.0) * geometry.size.width
-                    let isMajor = Int(freq) % 2 == 0
-
-                    Rectangle()
-                        .fill(RadioColors.dialText)
-                        .frame(width: isMajor ? 2 : 1, height: CGFloat(isMajor ? 14 : 7))
-                        .position(x: xPos, y: geometry.size.height / 2)
-                }
-            }
-            .frame(height: 18)
-        }
-        .frame(height: 20)
-        .padding(.horizontal, 10)
-    }
-
-    var freqNumbers: some View {
-        HStack {
-            ForEach([88, 92, 96, 100, 104, 108], id: \.self) { freq in
-                Text("\(freq)")
-                    .font(.system(size: 11))
-                    .fontWeight(.bold)
-                    .foregroundColor(RadioColors.dialText)
                 Spacer()
             }
+            .padding(.top, 16)
+            
+            // 历史事件详细气泡 (悬浮层)
+            // 放在这里是为了覆盖刻度，但我想让指针覆盖它？
+            // 不，气泡应该最上层以保证文字清晰
+            eventPopups(width: contentWidth)
+                .frame(height: innerHeight)
+                .padding(.horizontal, 10)
+                // .allowsHitTesting(false) // Removed to allow podcast button interaction
+            
+            // 指针层
+            needle(width: contentWidth, height: innerHeight)
+                .offset(y: 16)
+                .padding(.horizontal, 10)
         }
-        .padding(.horizontal, 6)
     }
 
-    var needle: some View {
-        GeometryReader { geometry in
-            let dialWidth = geometry.size.width * 0.45
-            let normalizedFreq = (viewModel.currentFrequency - minFreq) / (maxFreq - minFreq)
-            let xPos = normalizedFreq * dialWidth
+    func dynastyScale(width: CGFloat) -> some View {
+        ZStack {
+            ForEach(DYNASTY_FREQUENCIES.filter { $0.id != "modern" }) { dynasty in
+                // 使用 ViewModel 的非线性映射计算位置
+                let percent = viewModel.getPercent(forYear: dynasty.startYear)
+                let xPos = percent * width
+                let safeX = xPos.isFinite ? xPos : 0
+                
+                // 逻辑核心：允许朝代重叠高亮
+                // 只要当前年份落在该朝代的 [start, end] 区间内，点亮该朝代
+                let isHighlighted = viewModel.currentYear >= dynasty.startYear && viewModel.currentYear <= dynasty.endYear
 
-            ZStack {
-                Rectangle()
-                    .fill(RadioColors.needle)
-                    .frame(width: 2, height: .infinity)
-                    .shadow(color: RadioColors.needle, radius: 4)
+                VStack(spacing: 1) {
+                    Rectangle()
+                        .fill(Color(hex: dynasty.color))
+                        .frame(width: 3, height: 10)
+                        .cornerRadius(1)
 
-                // 指针三角形
-                Path { path in
-                    path.move(to: CGPoint(x: -5, y: 0))
-                    path.addLine(to: CGPoint(x: 5, y: 0))
-                    path.addLine(to: CGPoint(x: 0, y: 8))
-                    path.closeSubpath()
+                    Text(dynasty.chineseName)
+                        .font(.system(size: isHighlighted ? 14 : 10)) // 放大高亮字体 (was 12)
+                        .fontWeight(isHighlighted ? .black : .medium) // 加粗 (was bold)
+                        .foregroundColor(isHighlighted ? RadioColors.needle : RadioColors.dialText)
+                        .shadow(color: isHighlighted ? RadioColors.glow : .clear, radius: 2)
+                        .scaleEffect(isHighlighted ? 1.2 : 1.0) // 增加一点缩放动画
+                        .animation(.spring(response: 0.3), value: isHighlighted)
                 }
-                .fill(RadioColors.needle)
-                .offset(y: -8)
+                .position(x: safeX, y: 20)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                        viewModel.jumpToDynasty(dynasty)
+                    }
+                }
             }
-            .frame(width: 4)
-            .offset(x: 10 + xPos)
         }
-        .padding(.top, 20)
-        .padding(.bottom, 8)
+    }
+    
+    // ... freqScale and freqNumbers unchanged ...
+
+    func freqScale(width: CGFloat) -> some View {
+        ZStack {
+            // 生成刻度：BC 2000 到 AD 2000
+            // 由于是非线性的，我们还是按固定步长生成，但位置会挤压/拉伸
+            ForEach(Array(stride(from: -2000, through: 2000, by: 100)), id: \.self) { year in
+                let percent = viewModel.getPercent(forYear: year)
+                let xPos = percent * width
+                
+                // 0年特殊处理 (虽然历史上没有0年，但作为轴线分界)
+                let isZero = year == 0
+                let isMajor = (year % 500 == 0) // 每500年一个大刻度
+                let isMiddle = (year % 100 == 0) // 每100年
+
+                if xPos.isFinite {
+                    Rectangle()
+                        .fill(isZero ? RadioColors.needle.opacity(0.8) : RadioColors.dialText)
+                        .frame(width: isMajor ? 2 : 1, height: CGFloat(isMajor ? 14 : (isMiddle ? 10 : 6)))
+                        .position(x: xPos, y: 10)
+                }
+            }
+        }
+    }
+
+    func freqNumbers(width: CGFloat) -> some View {
+        ZStack {
+            // 主要年份数字显示
+            ForEach([-2000, -1000, 0, 1000, 2000], id: \.self) { year in
+                let percent = viewModel.getPercent(forYear: year)
+                let xPos = percent * width
+                
+                Text("\(year)")
+                    .font(.system(size: 10, design: .monospaced))
+                    .fontWeight(.bold)
+                    .foregroundColor(RadioColors.dialText)
+                    .position(x: xPos.isFinite ? xPos : 0, y: 10)
+            }
+        }
+    }
+
+    func eventDots(width: CGFloat) -> some View {
+        ZStack {
+            ForEach(viewModel.historicalEvents) { event in
+                let percent = viewModel.getPercent(forYear: event.year)
+                let xPos = percent * width
+                
+                if xPos.isFinite {
+                    let dist = abs(viewModel.currentYear - event.year)
+                    let isClose = dist < 20
+                    
+                    Circle()
+                        .fill(isClose ? RadioColors.needle : RadioColors.dialText.opacity(0.5))
+                        .frame(width: isClose ? 8 : 4, height: isClose ? 8 : 4)
+                        .position(x: xPos, y: 5)
+                }
+            }
+        }
+    }
+    
+    func eventPopups(width: CGFloat) -> some View {
+        ZStack {
+            ForEach(viewModel.historicalEvents) { event in
+                let percent = viewModel.getPercent(forYear: event.year)
+                let xPos = percent * width
+                let dist = abs(viewModel.currentYear - event.year)
+                let isClose = dist < 20 // 激活范围
+                
+                if xPos.isFinite && isClose {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(event.year < 0 ? "前" : "公元") \(abs(event.year))年 \(event.title)")
+                            .font(.system(size: 14, weight: .bold, design: .serif)) // Serif Title
+                            .foregroundColor(Color(hex: "3E2723"))
+                        
+                        Text(event.description)
+                            .font(.system(size: 12, design: .serif)) // Serif Body
+                            .foregroundColor(Color(hex: "3E2723").opacity(0.9))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .lineLimit(3) // Slightly more text allowance
+                    }
+                    .padding(12)
+                    .frame(maxWidth: 320) // Flexible width
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(hex: "F3E5AB")) // Parchment
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(hex: "3E2723"), lineWidth: 2) // Dark Brown Border
+                    )
+                    .shadow(color: Color.black.opacity(0.3), radius: 6, x: 0, y: 4)
+                    .position(x: xPos, y: 160)
+                    .transition(.scale.combined(with: .opacity))
+                    .zIndex(100)
+                }
+            }
+        }
+    }
+
+    func needle(width: CGFloat, height: CGFloat) -> some View {
+        // 使用 getPercent 获取当前年份的归一化位置
+        let percent = viewModel.getPercent(forYear: viewModel.currentYear)
+        let xPos = percent * width
+        let safeX = xPos.isFinite ? xPos : 0
+        
+        // Needle Length Configuration
+        let needleHeight = height * 0.35 // Shortened further to 35% as requested
+        
+        return ZStack {
+            // 红色垂直指示线
+            Rectangle()
+                .fill(RadioColors.needle)
+                .frame(width: 2, height: needleHeight)
+                .shadow(color: RadioColors.needle.opacity(0.5), radius: 2)
+        }
+        .frame(width: 10)
+        .position(x: safeX, y: height * 0.45) // Slightly lower center to match layout
     }
 
     var freqDisplay: some View {
-        Text("FM \(String(format: "%.1f", viewModel.currentFrequency))")
-            .font(.system(size: 12, family: .monospaced))
-            .fontWeight(.bold)
-            .foregroundColor(RadioColors.glow)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 3)
+        Text(viewModel.currentYearString)
+            .font(.system(size: 16, design: .serif))
+            .fontWeight(.black) // Heavy weight
+            .foregroundColor(Color(red: 1.0, green: 0.8, blue: 0.2)) // Golden Yellow
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
             .background(
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color(red: 0.1, green: 0.1, blue: 0.1))
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.black)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 4)
-                            .stroke(RadioColors.brass, lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color(red: 1.0, green: 0.8, blue: 0.2), lineWidth: 2)
                     )
             )
+            .shadow(color: Color(red: 1.0, green: 0.8, blue: 0.2).opacity(0.3), radius: 5)
     }
 }
+
 
 // Color 扩展
 extension Color {
@@ -235,11 +315,11 @@ extension Color {
         let a, r, g, b: UInt64
         switch hex.count {
         case 6: // RGB
-            (a, r, g, b) = (255, int >> 16, int >> 8, int)
+            (a, r, g, b) = (255, (int >> 16) & 0xFF, (int >> 8) & 0xFF, int & 0xFF)
         case 8: // ARGB
-            (a, r, g, b) = (int >> 24, int >> 16, int >> 8, int)
+            (a, r, g, b) = ((int >> 24) & 0xFF, (int >> 16) & 0xFF, (int >> 8) & 0xFF, int & 0xFF)
         default:
-            (a, r, g, b) = (1, 1, 1, 0)
+            (a, r, g, b) = (255, 0, 0, 0) // Default to black opacity 1 if failed
         }
         self.init(
             .sRGB,

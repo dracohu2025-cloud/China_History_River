@@ -34,8 +34,8 @@ struct RadioBodyView<Content: View>: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .cornerRadius(20)
-            .shadow(color: .black.opacity(0.5), radius: 20, x: 0, y: 10)
+            // .cornerRadius(20) // Removed for fullscreen
+            // .shadow(color: .black.opacity(0.5), radius: 20, x: 0, y: 10) // Removed for fullscreen
 
             // 顶部黄铜装饰条
             VStack(spacing: 0) {
@@ -56,6 +56,7 @@ struct RadioBodyView<Content: View>: View {
                 // 底部装饰
                 bottomTrim
             }
+            .frame(maxWidth: 760) // Keep controls centered and constrained
         }
     }
 
