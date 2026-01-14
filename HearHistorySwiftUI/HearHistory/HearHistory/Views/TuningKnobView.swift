@@ -151,99 +151,146 @@ struct PowerLEDView: View {
 // 扬声器/节目显示面板
 // 当有播客时，显示可选择的节目列表
 // 当无播客时，显示复古扬声器网格
+// 扬声器/节目显示面板
 struct SpeakerGrillView: View {
     @ObservedObject var viewModel: RadioViewModel
     
     var body: some View {
         ZStack {
-            // 外框 - 椭圆形面板
-            RoundedRectangle(cornerRadius: 12)
-                .fill(RadioColors.speaker)
-                .frame(width: 160, height: 100)
-                .shadow(color: .black.opacity(0.6), radius: 4, x: 2, y: 2)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.black.opacity(0.3), lineWidth: 1)
+            // 面板背景 - 深色凹陷效果
+            RoundedRectangle(cornerRadius: 16)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(hex: "2D1E16"), Color(hex: "1A110D")],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
                 )
+                .frame(width: 170, height: 110)
+                .overlay(
+                    // 内阴影，模拟凹陷
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.black.opacity(0.6), lineWidth: 4)
+                        .blur(radius: 2)
+                        .offset(x: 2, y: 2)
+                        .mask(RoundedRectangle(cornerRadius: 16))
+                )
+                .overlay(
+                    // 顶部高光边框
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color(hex: "5D4037").opacity(0.4), lineWidth: 1)
+                )
+                .shadow(color: Color.white.opacity(0.05), radius: 1, x: 0, y: 1) // 底部轻微反光
             
-            // 内容区域
-            if let event = viewModel.activeEvent, event.hasPodcast {
-                // 有播客时：显示节目列表
-                programListView(podcasts: event.podcasts)
-            } else {
-                // 无播客时：显示扬声器网格
-                speakerMeshView()
+            // 内容区域 - 使用 GeometryReader 确保不溢出
+            GeometryReader { geo in
+                ZStack {
+                    if let event = viewModel.activeEvent, event.hasPodcast {
+                        programListView(podcasts: event.podcasts, width: geo.size.width)
+                    } else {
+                        speakerMeshView()
+                    }
+                }
+                .frame(width: geo.size.width, height: geo.size.height)
             }
+            .frame(width: 154, height: 94) // 略小于背景，形成内边距
+            .clipShape(RoundedRectangle(cornerRadius: 12)) // 强制裁剪超出部分
         }
     }
     
     /// 扬声器网格（默认状态）
     private func speakerMeshView() -> some View {
-        VStack(spacing: 3) {
-            ForEach(0..<6, id: \.self) { _ in
-                HStack(spacing: 3) {
-                    ForEach(0..<16, id: \.self) { _ in
-                        Circle()
-                            .fill(RadioColors.speakerMesh)
-                            .frame(width: 5, height: 5)
+        ZStack {
+             // 网格纹理
+             VStack(spacing: 3) {
+                ForEach(0..<8, id: \.self) { _ in
+                    HStack(spacing: 3) {
+                        ForEach(0..<18, id: \.self) { _ in
+                            Circle()
+                                .fill(Color.black.opacity(0.6))
+                                .frame(width: 4, height: 4)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color(hex: "3E2723"), lineWidth: 0.5)
+                                )
+                        }
                     }
                 }
             }
         }
-        .padding(10)
     }
     
     /// 节目列表（有播客时）
-    private func programListView(podcasts: [PodcastItem]) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // 标题栏
+    private func programListView(podcasts: [PodcastItem], width: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            // 顶部状态栏 - 模拟 VFD显示屏或背光板
             HStack {
-                Text("📻 PROGRAM")
+                Text("📻 PROGRAM SELECT")
                     .font(.system(size: 8, weight: .bold, design: .monospaced))
-                    .foregroundColor(Color(hex: "FFD700").opacity(0.8))
+                    .foregroundColor(Color(hex: "FFB300"))
+                    .shadow(color: Color(hex: "FFB300").opacity(0.5), radius: 2)
+                
                 Spacer()
+                
+                // 简单的信号强度指示
+                HStack(spacing: 1) {
+                    ForEach(0..<4) { i in
+                        Rectangle()
+                            .fill(Color(hex: "FF4444").opacity(i < 3 ? 0.8 : 0.2))
+                            .frame(width: 2, height: 4 + CGFloat(i) * 2)
+                    }
+                }
             }
-            .padding(.horizontal, 6)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color.black.opacity(0.3))
             
-            // 节目列表
+            // 节目列表容器
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
                     ForEach(Array(podcasts.enumerated()), id: \.element.id) { index, podcast in
                         Button(action: {
-                            viewModel.selectPodcast(at: index)
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                viewModel.selectPodcast(at: index)
+                            }
                         }) {
-                            HStack(spacing: 6) {
-                                // 选中指示器 - 复古 LED 灯
+                            HStack(spacing: 8) {
+                                // 选中状态：发光点
                                 Circle()
                                     .fill(viewModel.selectedPodcastIndex == index ?
                                           Color(hex: "FF4444") : Color(hex: "3E2723"))
                                     .frame(width: 6, height: 6)
                                     .shadow(color: viewModel.selectedPodcastIndex == index ?
-                                            Color(hex: "FF4444") : .clear, radius: 3)
+                                            Color(hex: "FF4444") : .clear, radius: 4)
                                 
-                                // 节目标题
+                                // 标题
                                 Text(podcast.bookTitle)
-                                    .font(.system(size: 9, weight: viewModel.selectedPodcastIndex == index ? .bold : .regular, design: .monospaced))
+                                    .font(.system(size: 10, weight: viewModel.selectedPodcastIndex == index ? .semibold : .regular, design: .monospaced))
                                     .foregroundColor(viewModel.selectedPodcastIndex == index ?
-                                                     Color(hex: "FFD700") : Color(hex: "D7CCC8"))
+                                                     Color(hex: "FFD700") : Color(hex: "BCAAA4"))
                                     .lineLimit(1)
                                 
                                 Spacer()
                             }
-                            .padding(.vertical, 2)
-                            .padding(.horizontal, 4)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 8)
                             .background(
-                                viewModel.selectedPodcastIndex == index ?
-                                Color(hex: "5D4037").opacity(0.5) : Color.clear
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(viewModel.selectedPodcastIndex == index ?
+                                          Color(hex: "FFD700").opacity(0.15) : Color.transparent)
                             )
-                            .cornerRadius(3)
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
                 }
+                .padding(.vertical, 4)
+                .padding(.horizontal, 4)
             }
-            .frame(maxHeight: 60)
         }
-        .padding(6)
+        .background(Color(hex: "1F1410")) // 更深的内部背景
     }
+}
+
+extension Color {
+    static let transparent = Color.white.opacity(0.0001)
 }

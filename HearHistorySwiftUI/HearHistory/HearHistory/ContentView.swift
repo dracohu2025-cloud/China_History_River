@@ -32,12 +32,13 @@ struct ContentView: View {
                     Spacer()
                     
                     // 下半部分：控制区
-                    HStack(alignment: .bottom, spacing: 30) {
+                    HStack(alignment: .center, spacing: 30) {
                         
                         // 左侧：节目显示面板 / 扬声器
+                        // 自身高度约 110，通过 padding 调整垂直位置
                         SpeakerGrillView(viewModel: viewModel)
                             .padding(.leading, 30)
-                            .padding(.bottom, 20)
+                            .padding(.bottom, 10)
                         
                         Spacer()
                         
