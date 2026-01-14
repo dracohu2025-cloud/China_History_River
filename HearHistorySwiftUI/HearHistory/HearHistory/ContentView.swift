@@ -34,8 +34,8 @@ struct ContentView: View {
                     // 下半部分：控制区
                     HStack(alignment: .bottom, spacing: 30) {
                         
-                        // 左侧：巨大的扬声器 (增加细节)
-                        SpeakerGrillView()
+                        // 左侧：节目显示面板 / 扬声器
+                        SpeakerGrillView(viewModel: viewModel)
                             .padding(.leading, 30)
                             .padding(.bottom, 20)
                         

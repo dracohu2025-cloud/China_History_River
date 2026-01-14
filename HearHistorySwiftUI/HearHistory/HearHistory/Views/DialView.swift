@@ -297,54 +297,17 @@ struct DialView: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .lineLimit(2)
                         
-                        // 多播客预设按钮（仅当有多个播客时显示）
+                        // 多播客提示（如果有多个播客，提示用户看左下角）
                         if event.podcasts.count > 1 {
-                            Divider()
-                                .background(Color(hex: "3E2723").opacity(0.3))
-                            
-                            HStack(spacing: 8) {
-                                Text("📻 选台：")
-                                    .font(.system(size: 10, design: .serif))
-                                    .foregroundColor(Color(hex: "3E2723").opacity(0.7))
-                                
-                                ForEach(Array(event.podcasts.enumerated()), id: \.element.id) { index, podcast in
-                                    Button(action: {
-                                        viewModel.selectPodcast(at: index)
-                                    }) {
-                                        ZStack {
-                                            // 外圈
-                                            Circle()
-                                                .fill(viewModel.selectedPodcastIndex == index ? 
-                                                      Color(hex: "FFD700") : Color(hex: "5D4037"))
-                                                .frame(width: 24, height: 24)
-                                            
-                                            // 内圈发光效果
-                                            if viewModel.selectedPodcastIndex == index {
-                                                Circle()
-                                                    .fill(Color(hex: "FFF8DC"))
-                                                    .frame(width: 18, height: 18)
-                                                    .shadow(color: Color(hex: "FFD700"), radius: 4)
-                                            }
-                                            
-                                            // 数字
-                                            Text("\(index + 1)")
-                                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                                .foregroundColor(viewModel.selectedPodcastIndex == index ?
-                                                                 Color(hex: "3E2723") : Color(hex: "D7CCC8"))
-                                        }
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                }
-                                
-                                Spacer()
-                            }
-                            
-                            // 当前选中的播客标题
-                            if let selected = viewModel.selectedPodcast {
-                                Text("▸ 《\(selected.bookTitle)》")
-                                    .font(.system(size: 10, weight: .medium, design: .serif))
-                                    .foregroundColor(Color(hex: "8B4513"))
-                            }
+                             Text("📻 请在左侧面板选择节目")
+                                .font(.system(size: 10, design: .serif))
+                                .foregroundColor(Color(hex: "3E2723").opacity(0.6))
+                                .padding(.top, 2)
+                        } else if event.podcasts.count == 1 {
+                             Text("🎧 包含音频解说")
+                                .font(.system(size: 10, design: .serif))
+                                .foregroundColor(Color(hex: "3E2723").opacity(0.6))
+                                .padding(.top, 2)
                         }
                     }
                     .padding(12)

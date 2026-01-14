@@ -148,28 +148,102 @@ struct PowerLEDView: View {
     }
 }
 
-// 扬声器网格
+// 扬声器/节目显示面板
+// 当有播客时，显示可选择的节目列表
+// 当无播客时，显示复古扬声器网格
 struct SpeakerGrillView: View {
+    @ObservedObject var viewModel: RadioViewModel
+    
     var body: some View {
         ZStack {
-            Circle()
+            // 外框 - 椭圆形面板
+            RoundedRectangle(cornerRadius: 12)
                 .fill(RadioColors.speaker)
-                .frame(width: 100, height: 100)
-                .shadow(color: .black.opacity(0.8), radius: 4, x: 2, y: 2)
-
-            // 8x12 网格孔
-            VStack(spacing: 2) {
-                ForEach(0..<8) { _ in
-                    HStack(spacing: 2) {
-                        ForEach(0..<12) { _ in
-                            Circle()
-                                .fill(RadioColors.speakerMesh)
-                                .frame(width: 5, height: 5)
-                        }
+                .frame(width: 160, height: 100)
+                .shadow(color: .black.opacity(0.6), radius: 4, x: 2, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.black.opacity(0.3), lineWidth: 1)
+                )
+            
+            // 内容区域
+            if let event = viewModel.activeEvent, event.hasPodcast {
+                // 有播客时：显示节目列表
+                programListView(podcasts: event.podcasts)
+            } else {
+                // 无播客时：显示扬声器网格
+                speakerMeshView()
+            }
+        }
+    }
+    
+    /// 扬声器网格（默认状态）
+    private func speakerMeshView() -> some View {
+        VStack(spacing: 3) {
+            ForEach(0..<6, id: \.self) { _ in
+                HStack(spacing: 3) {
+                    ForEach(0..<16, id: \.self) { _ in
+                        Circle()
+                            .fill(RadioColors.speakerMesh)
+                            .frame(width: 5, height: 5)
                     }
                 }
             }
-            .padding(8)
         }
+        .padding(10)
+    }
+    
+    /// 节目列表（有播客时）
+    private func programListView(podcasts: [PodcastItem]) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            // 标题栏
+            HStack {
+                Text("📻 PROGRAM")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundColor(Color(hex: "FFD700").opacity(0.8))
+                Spacer()
+            }
+            .padding(.horizontal, 6)
+            
+            // 节目列表
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(Array(podcasts.enumerated()), id: \.element.id) { index, podcast in
+                        Button(action: {
+                            viewModel.selectPodcast(at: index)
+                        }) {
+                            HStack(spacing: 6) {
+                                // 选中指示器 - 复古 LED 灯
+                                Circle()
+                                    .fill(viewModel.selectedPodcastIndex == index ?
+                                          Color(hex: "FF4444") : Color(hex: "3E2723"))
+                                    .frame(width: 6, height: 6)
+                                    .shadow(color: viewModel.selectedPodcastIndex == index ?
+                                            Color(hex: "FF4444") : .clear, radius: 3)
+                                
+                                // 节目标题
+                                Text(podcast.bookTitle)
+                                    .font(.system(size: 9, weight: viewModel.selectedPodcastIndex == index ? .bold : .regular, design: .monospaced))
+                                    .foregroundColor(viewModel.selectedPodcastIndex == index ?
+                                                     Color(hex: "FFD700") : Color(hex: "D7CCC8"))
+                                    .lineLimit(1)
+                                
+                                Spacer()
+                            }
+                            .padding(.vertical, 2)
+                            .padding(.horizontal, 4)
+                            .background(
+                                viewModel.selectedPodcastIndex == index ?
+                                Color(hex: "5D4037").opacity(0.5) : Color.clear
+                            )
+                            .cornerRadius(3)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+            }
+            .frame(maxHeight: 60)
+        }
+        .padding(6)
     }
 }
