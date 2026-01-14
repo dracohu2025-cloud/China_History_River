@@ -3,12 +3,25 @@ import SwiftUI
 import Combine
 import UIKit
 
+/// 单个播客项
+struct PodcastItem: Identifiable {
+    let id = UUID()
+    let uuid: String           // Supabase podcasts table ID
+    let bookTitle: String      // 《书名》
+}
+
+/// 历史事件模型
 struct HistoricalEvent: Identifiable {
     let id = UUID()
     let year: Int
     let title: String
     var description: String
-    var hasPodcast: Bool = false
+    var podcasts: [PodcastItem] = []  // 该事件关联的所有播客
+    
+    /// 是否有播客可收听
+    var hasPodcast: Bool {
+        !podcasts.isEmpty
+    }
 }
 
 // 收音机状态管理
@@ -63,6 +76,7 @@ class RadioViewModel: ObservableObject {
     
     // Data Source
     @Published var historicalEvents: [HistoricalEvent] = []
+    @Published var dynasties: [Dynasty] = DYNASTY_FREQUENCIES  // Start with local fallback
     
     // ...
     
@@ -75,16 +89,15 @@ class RadioViewModel: ObservableObject {
             // 2. 尝试获取播客数据
             let podcastEvents = try await SupabaseManager.shared.fetchAllEvents()
             
-            // 3. 合并逻辑：如果年份相同，保留基础描述，追加播客信息
+            // 3. 合并逻辑：如果年份相同，保留基础描述，追加播客数组
             for pEvent in podcastEvents {
                 if let index = mergedEvents.firstIndex(where: { $0.year == pEvent.year }) {
-                    // 找到现有历史事件，"点亮"播客图标，并合并书籍信息
+                    // 找到现有历史事件，合并播客数组
                     var existing = mergedEvents[index]
-                    existing.hasPodcast = true
-                    // 避免重复追加
-                    if !existing.description.contains(pEvent.description) {
-                         existing.description += "\n🎧 \(pEvent.description)"
-                    }
+                    existing.podcasts = pEvent.podcasts
+                    // 追加播客信息到描述
+                    let podcastTitles = pEvent.podcasts.map { "《\($0.bookTitle)》" }.joined(separator: "、")
+                    existing.description += "\n🎧 收听解读：\(podcastTitles)"
                     mergedEvents[index] = existing
                 } else {
                     // 全新事件（基础库中没有的）
@@ -94,6 +107,12 @@ class RadioViewModel: ObservableObject {
             
             // 4. 排序并更新
             self.historicalEvents = mergedEvents.sorted { $0.year < $1.year }
+            
+            // 5. 加载朝代数据
+            let remoteDynasties = try await SupabaseManager.shared.fetchDynasties()
+            if !remoteDynasties.isEmpty {
+                self.dynasties = remoteDynasties
+            }
             
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         } catch {
@@ -136,17 +155,35 @@ class RadioViewModel: ObservableObject {
     // 当前正在播放的事件
     @Published var activePodcastEvent: HistoricalEvent?
     
+    // 多播客选择：当前选中的播客索引
+    @Published var selectedPodcastIndex: Int = 0
+    
+    /// 选择播客（预设按钮点击）
+    func selectPodcast(at index: Int) {
+        guard let event = activeEvent, index < event.podcasts.count else { return }
+        selectedPodcastIndex = index
+        selectionHaptic.selectionChanged()
+    }
+    
+    /// 获取当前选中的播客
+    var selectedPodcast: PodcastItem? {
+        guard let event = activeEvent, selectedPodcastIndex < event.podcasts.count else { return nil }
+        return event.podcasts[selectedPodcastIndex]
+    }
+    
     func togglePodcast() {
         if isPlaying {
-            // Stop
+            // Stop playback
+            AudioManager.shared.stop()
             isPlaying = false
             activePodcastEvent = nil
             limitHaptic.notificationOccurred(.success)
         } else {
-            // Play
-            if let event = activeEvent, event.hasPodcast {
+            // Start playback with selected podcast
+            if let event = activeEvent, let podcast = selectedPodcast {
                 activePodcastEvent = event
                 isPlaying = true
+                AudioManager.shared.play(podcastUUID: podcast.uuid, title: podcast.bookTitle)
                 limitHaptic.notificationOccurred(.success)
             }
         }

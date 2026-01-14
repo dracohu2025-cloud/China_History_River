@@ -130,33 +130,81 @@ struct DialView: View {
         }
     }
 
+    /// 计算朝代标签的行分配（智能防重叠）
+    private func calculateDynastyRowAssignments(for dynasties: [Dynasty], width: CGFloat) -> [(dynasty: Dynasty, xPos: CGFloat, isUpperRow: Bool)] {
+        let minSpacing: CGFloat = 45
+        var lastXInRow: [CGFloat] = [-1000, -1000]  // [上排, 下排]
+        
+        return dynasties.map { dynasty in
+            let percent = viewModel.getPercent(forYear: dynasty.startYear)
+            let xPos = percent * width
+            let safeX = xPos.isFinite ? xPos : 0
+            
+            // 检查哪一行可以放置
+            let canPlaceUpper = (safeX - lastXInRow[0]) >= minSpacing
+            let canPlaceLower = (safeX - lastXInRow[1]) >= minSpacing
+            
+            let isUpper: Bool
+            if canPlaceUpper && !canPlaceLower {
+                isUpper = true
+            } else if canPlaceLower && !canPlaceUpper {
+                isUpper = false
+            } else {
+                // 两行都可以放（或都放不下），选择距离更远的那行
+                isUpper = (safeX - lastXInRow[0]) >= (safeX - lastXInRow[1])
+            }
+            
+            lastXInRow[isUpper ? 0 : 1] = safeX
+            return (dynasty, safeX, isUpper)
+        }
+    }
+    
     func dynastyScale(width: CGFloat) -> some View {
-        ZStack {
-            ForEach(DYNASTY_FREQUENCIES.filter { $0.id != "modern" }) { dynasty in
-                // 使用 ViewModel 的非线性映射计算位置
-                let percent = viewModel.getPercent(forYear: dynasty.startYear)
-                let xPos = percent * width
-                let safeX = xPos.isFinite ? xPos : 0
+        let filteredDynasties = viewModel.dynasties.filter { 
+            $0.id != "modern" && $0.id != "prc" && $0.id != "roc"
+        }
+        
+        let layoutData = calculateDynastyRowAssignments(for: filteredDynasties, width: width)
+        
+        return ZStack {
+            ForEach(layoutData, id: \.dynasty.id) { item in
+                let dynasty = item.dynasty
+                let safeX = item.xPos
+                let isUpperRow = item.isUpperRow
+                let yPosition: CGFloat = isUpperRow ? 12 : 32
                 
-                // 逻辑核心：允许朝代重叠高亮
-                // 只要当前年份落在该朝代的 [start, end] 区间内，点亮该朝代
                 let isHighlighted = viewModel.currentYear >= dynasty.startYear && viewModel.currentYear <= dynasty.endYear
 
                 VStack(spacing: 1) {
-                    Rectangle()
-                        .fill(Color(hex: dynasty.color))
-                        .frame(width: 3, height: 10)
-                        .cornerRadius(1)
-
-                    Text(dynasty.chineseName)
-                        .font(.system(size: isHighlighted ? 14 : 10)) // 放大高亮字体 (was 12)
-                        .fontWeight(isHighlighted ? .black : .medium) // 加粗 (was bold)
-                        .foregroundColor(isHighlighted ? RadioColors.needle : RadioColors.dialText)
-                        .shadow(color: isHighlighted ? RadioColors.glow : .clear, radius: 2)
-                        .scaleEffect(isHighlighted ? 1.2 : 1.0) // 增加一点缩放动画
-                        .animation(.spring(response: 0.3), value: isHighlighted)
+                    if isUpperRow {
+                        Text(dynasty.chineseName)
+                            .font(.system(size: isHighlighted ? 12 : 9))
+                            .fontWeight(isHighlighted ? .black : .medium)
+                            .foregroundColor(isHighlighted ? RadioColors.needle : RadioColors.dialText)
+                            .shadow(color: isHighlighted ? RadioColors.glow : .clear, radius: 2)
+                            .scaleEffect(isHighlighted ? 1.15 : 1.0)
+                            .animation(.spring(response: 0.3), value: isHighlighted)
+                        
+                        Rectangle()
+                            .fill(Color(hex: dynasty.color))
+                            .frame(width: 2, height: 8)
+                            .cornerRadius(1)
+                    } else {
+                        Rectangle()
+                            .fill(Color(hex: dynasty.color))
+                            .frame(width: 2, height: 8)
+                            .cornerRadius(1)
+                        
+                        Text(dynasty.chineseName)
+                            .font(.system(size: isHighlighted ? 12 : 9))
+                            .fontWeight(isHighlighted ? .black : .medium)
+                            .foregroundColor(isHighlighted ? RadioColors.needle : RadioColors.dialText)
+                            .shadow(color: isHighlighted ? RadioColors.glow : .clear, radius: 2)
+                            .scaleEffect(isHighlighted ? 1.15 : 1.0)
+                            .animation(.spring(response: 0.3), value: isHighlighted)
+                    }
                 }
-                .position(x: safeX, y: 20)
+                .position(x: safeX, y: yPosition)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
@@ -236,26 +284,78 @@ struct DialView: View {
                 let isClose = dist < 20 // 激活范围
                 
                 if xPos.isFinite && isClose {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        // 标题行
                         Text("\(event.year < 0 ? "前" : "公元") \(abs(event.year))年 \(event.title)")
-                            .font(.system(size: 14, weight: .bold, design: .serif)) // Serif Title
+                            .font(.system(size: 14, weight: .bold, design: .serif))
                             .foregroundColor(Color(hex: "3E2723"))
                         
+                        // 描述
                         Text(event.description)
-                            .font(.system(size: 12, design: .serif)) // Serif Body
-                            .foregroundColor(Color(hex: "3E2723").opacity(0.9))
+                            .font(.system(size: 11, design: .serif))
+                            .foregroundColor(Color(hex: "3E2723").opacity(0.85))
                             .fixedSize(horizontal: false, vertical: true)
-                            .lineLimit(3) // Slightly more text allowance
+                            .lineLimit(2)
+                        
+                        // 多播客预设按钮（仅当有多个播客时显示）
+                        if event.podcasts.count > 1 {
+                            Divider()
+                                .background(Color(hex: "3E2723").opacity(0.3))
+                            
+                            HStack(spacing: 8) {
+                                Text("📻 选台：")
+                                    .font(.system(size: 10, design: .serif))
+                                    .foregroundColor(Color(hex: "3E2723").opacity(0.7))
+                                
+                                ForEach(Array(event.podcasts.enumerated()), id: \.element.id) { index, podcast in
+                                    Button(action: {
+                                        viewModel.selectPodcast(at: index)
+                                    }) {
+                                        ZStack {
+                                            // 外圈
+                                            Circle()
+                                                .fill(viewModel.selectedPodcastIndex == index ? 
+                                                      Color(hex: "FFD700") : Color(hex: "5D4037"))
+                                                .frame(width: 24, height: 24)
+                                            
+                                            // 内圈发光效果
+                                            if viewModel.selectedPodcastIndex == index {
+                                                Circle()
+                                                    .fill(Color(hex: "FFF8DC"))
+                                                    .frame(width: 18, height: 18)
+                                                    .shadow(color: Color(hex: "FFD700"), radius: 4)
+                                            }
+                                            
+                                            // 数字
+                                            Text("\(index + 1)")
+                                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                                .foregroundColor(viewModel.selectedPodcastIndex == index ?
+                                                                 Color(hex: "3E2723") : Color(hex: "D7CCC8"))
+                                        }
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                                
+                                Spacer()
+                            }
+                            
+                            // 当前选中的播客标题
+                            if let selected = viewModel.selectedPodcast {
+                                Text("▸ 《\(selected.bookTitle)》")
+                                    .font(.system(size: 10, weight: .medium, design: .serif))
+                                    .foregroundColor(Color(hex: "8B4513"))
+                            }
+                        }
                     }
                     .padding(12)
-                    .frame(maxWidth: 320) // Flexible width
+                    .frame(maxWidth: 340)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(hex: "F3E5AB")) // Parchment
+                            .fill(Color(hex: "F3E5AB"))
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color(hex: "3E2723"), lineWidth: 2) // Dark Brown Border
+                            .stroke(Color(hex: "3E2723"), lineWidth: 2)
                     )
                     .shadow(color: Color.black.opacity(0.3), radius: 6, x: 0, y: 4)
                     .position(x: xPos, y: 160)
