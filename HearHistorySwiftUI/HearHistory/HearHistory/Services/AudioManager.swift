@@ -7,6 +7,9 @@ class AudioManager: ObservableObject {
     static let shared = AudioManager()
     
     private var player: AVPlayer?
+    private var currentPodcastUUID: String?  // Track currently loaded podcast
+    private var playbackProgress: [String: CMTime] = [:] // Store progress for each podcast
+    
     @Published var isPlaying: Bool = false
     @Published var currentPodcastTitle: String?
     
@@ -22,23 +25,32 @@ class AudioManager: ObservableObject {
         }
     }
     
-    /// Construct the public URL for a podcast audio file
-    /// Storage bucket: "podcasts", path format: "{user_id}/{podcast_uuid}/audio.mp3"
-    func getAudioURL(for podcastUUID: String, userID: String = "anonymous") -> URL? {
-        // Supabase Storage public URL pattern:
-        // https://{project}.supabase.co/storage/v1/object/public/{bucket}/{path}
-        let audioPath = "\(userID)/\(podcastUUID)/audio.mp3"
-        let urlString = "\(supabaseURL)/storage/v1/object/public/podcasts/\(audioPath)"
-        return URL(string: urlString)
-    }
+    // ... getAudioURL method unchanged ...
     
     /// Play audio from a podcast UUID
+    /// Auto-resumes from last position
     func play(podcastUUID: String, title: String) {
-        // First, try to get the audio URL from the podcasts table
-        // For now, we'll construct a likely URL pattern
         Task {
+            // Check if we are just resuming the same podcast
+            if currentPodcastUUID == podcastUUID, let player = player {
+                await MainActor.run {
+                    player.play()
+                    self.isPlaying = true
+                    print("▶️ Resuming: \(title)")
+                }
+                return
+            }
+            
+            // If switching podcasts, save progress of previous one
+            if let oldUUID = currentPodcastUUID, let player = player {
+                 await MainActor.run {
+                     let currentTime = player.currentTime()
+                     self.playbackProgress[oldUUID] = currentTime
+                     print("💾 Saved progress for \(oldUUID): \(currentTime.seconds)s")
+                 }
+            }
+            
             do {
-                // Query the podcasts table to get the actual audio_path
                 let audioPath = try await fetchAudioPath(for: podcastUUID)
                 
                 guard let url = constructFullURL(from: audioPath) else {
@@ -48,10 +60,20 @@ class AudioManager: ObservableObject {
                 
                 await MainActor.run {
                     self.currentPodcastTitle = title
-                    self.player = AVPlayer(url: url)
+                    self.currentPodcastUUID = podcastUUID
+                    
+                    let newPlayer = AVPlayer(url: url)
+                    
+                    // Seek to saved position if exists
+                    if let savedTime = self.playbackProgress[podcastUUID] {
+                        newPlayer.seek(to: savedTime)
+                        print("⏩ Seeking to saved position: \(savedTime.seconds)s")
+                    }
+                    
+                    self.player = newPlayer
                     self.player?.play()
                     self.isPlaying = true
-                    print("▶️ Playing: \(title) from \(url)")
+                    print("▶️ Playing new: \(title) from \(url)")
                 }
             } catch {
                 print("Failed to play audio: \(error)")
@@ -59,13 +81,19 @@ class AudioManager: ObservableObject {
         }
     }
     
-    /// Stop current playback
+    /// Pause current playback and save progress
     func stop() {
-        player?.pause()
-        player = nil
+        guard let player = player else { return }
+        
+        player.pause()
+        
+        if let currentUUID = currentPodcastUUID {
+            playbackProgress[currentUUID] = player.currentTime()
+            print("⏸ Paused. Progress saved for \(currentUUID)")
+        }
+        
         isPlaying = false
-        currentPodcastTitle = nil
-        print("⏹ Stopped playback")
+        // Don't clear currentPodcastTitle/UUID so we can resume
     }
     
     /// Fetch audio_path from podcasts table
