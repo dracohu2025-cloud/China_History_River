@@ -298,17 +298,7 @@ struct DialView: View {
                             .lineLimit(2)
                         
                         // 多播客提示（如果有多个播客，提示用户看左下角）
-                        if event.podcasts.count > 1 {
-                             Text("📻 请在左侧面板选择节目")
-                                .font(.system(size: 10, design: .serif))
-                                .foregroundColor(Color(hex: "3E2723").opacity(0.6))
-                                .padding(.top, 2)
-                        } else if event.podcasts.count == 1 {
-                             Text("🎧 包含音频解说")
-                                .font(.system(size: 10, design: .serif))
-                                .foregroundColor(Color(hex: "3E2723").opacity(0.6))
-                                .padding(.top, 2)
-                        }
+
                     }
                     .padding(12)
                     .frame(maxWidth: 340)

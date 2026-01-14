@@ -58,11 +58,10 @@ class SupabaseManager {
             
             // 转换为 HistoricalEvent 数组
             return eventsByYear.map { year, data in
-                let podcastTitles = data.podcasts.map { "《\($0.bookTitle)》" }.joined(separator: "、")
                 return HistoricalEvent(
                     year: year,
                     title: data.title,
-                    description: "🎧 收听解读：\(podcastTitles)",
+                    description: "（查看左侧面板选择节目）",
                     podcasts: data.podcasts
                 )
             }.sorted { $0.year < $1.year }

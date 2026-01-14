@@ -95,9 +95,7 @@ class RadioViewModel: ObservableObject {
                     // 找到现有历史事件，合并播客数组
                     var existing = mergedEvents[index]
                     existing.podcasts = pEvent.podcasts
-                    // 追加播客信息到描述
-                    let podcastTitles = pEvent.podcasts.map { "《\($0.bookTitle)》" }.joined(separator: "、")
-                    existing.description += "\n🎧 收听解读：\(podcastTitles)"
+                    // 不再将播客标题追加到描述中，因为左侧面板已显示
                     mergedEvents[index] = existing
                 } else {
                     // 全新事件（基础库中没有的）
